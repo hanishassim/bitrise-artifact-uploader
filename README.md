@@ -1,29 +1,25 @@
-# Welcome to your Lovable project
+# Bitrise™️ Artifact Uploader
 
-## Project info
+![Bitrise-uploader](https://github.com/user-attachments/assets/6ee98726-bfca-4ab0-93ce-0dab39697c6c)
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+This open-source project is a web-based tool for uploading mobile application artifacts (IPA, APK, and AAB files) to Bitrise™️ Release Management. It provides a simple and intuitive interface for selecting your Bitrise™️ app and uploading new builds.
 
-## How can I edit this code?
+The application uses a Supabase™️ Edge Function (`bitrise-proxy`) to securely communicate with the Bitrise™️ API, ensuring that your API tokens are never exposed on the client-side.
 
-There are several ways of editing your application.
+## Features
 
-**Use Lovable**
+-   Securely connect to your Bitrise™️ account using an API token and workspace ID.
+-   List and select from your available Bitrise™️ applications.
+-   Drag-and-drop or browse to upload your `.ipa`, `.apk`, or `.aab` files.
+-   View a history of your recent uploads.
+-   See detailed API logs for debugging purposes.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+To run this project locally, you'll need Node.js and npm installed.
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
+# Step 1: Clone the repository.
 git clone <YOUR_GIT_URL>
 
 # Step 2: Navigate to the project directory.
@@ -32,42 +28,87 @@ cd <YOUR_PROJECT_NAME>
 # Step 3: Install the necessary dependencies.
 npm i
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+# Step 4: Start the development server.
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+The development server will start, and you can access the application in your browser, usually at `http://localhost:8080`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Configuration
 
-**Use GitHub Codespaces**
+Before starting the development server, you need to set up your environment variables.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+1.  **Create a `.env` file:** Copy the `.env.example` file to a new file named `.env`.
 
-## What technologies are used for this project?
+    ```sh
+    cp .env.example .env
+    ```
+
+2.  **Add your Supabase™️ credentials:** Open the `.env` file and replace the placeholder values with your Supabase™️ project's credentials. You can find these in your Supabase™️ project's "API" settings.
+
+    ```
+    VITE_SUPABASE_PROJECT_ID="your-project-id"
+    VITE_SUPABASE_PUBLISHABLE_KEY="your-publishable-key"
+    VITE_SUPABASE_URL="https://your-project-id.supabase.co"
+    ```
+
+## Deploying Supabase™️ Edge Functions
+
+This project requires the `bitrise-proxy` Edge Function to be deployed to your Supabase™️ project to handle Bitrise™️ API requests securely.
+
+1.  **Install the Supabase CLI:**
+
+    ```sh
+    npm i supabase --save-dev
+    ```
+
+2.  **Update the Supabase™️ config file:** Open `supabase/config.toml` and replace the placeholder `project_id` with your actual Supabase™️ project ID.
+
+3.  **Link your Supabase™️ project:**
+
+    ```sh
+    npx supabase link --project-ref <PROJECT_ID>
+    ```
+
+3.  **Set your Supabase™️ access token:** You will need to provide a `SUPABASE_ACCESS_TOKEN` with `owner` or `admin` permissions for the CLI to deploy the function.
+
+    ```sh
+    export SUPABASE_ACCESS_TOKEN=<YOUR_ACCESS_TOKEN>
+    ```
+
+4.  **Deploy the Edge Function:**
+
+    ```sh
+    npx supabase functions deploy --no-verify-jwt bitrise-proxy
+    ```
+
+After completing these steps, the `bitrise-proxy` function will be ready to handle API requests.
+
+## Technologies Used
 
 This project is built with:
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+-   Vite
+-   TypeScript
+-   React
+-   shadcn-ui
+-   Tailwind CSS
+-   Supabase (for Edge Functions)
 
-## How can I deploy this project?
+## Security Note
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+If you have accidentally committed your `.env` file to the repository, you should take immediate action to remove it from the Git history. Even after you delete the file and update your `.gitignore`, the file will still exist in the commit history. You can use a tool like `git-filter-repo` to permanently remove the file from your repository's history.
 
-## Can I connect a custom domain to my Lovable project?
+## Contributing
 
-Yes, you can!
+We welcome contributions from the community to help make Habo even better! Whether you're a developer, or just an enthusiastic user, there are many ways you can help. 
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+## License
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+Bitrise™️ Artifact Uploader is released under the [MIT license](LICENSE). Feel free to use, modify, and distribute it as you wish. 
+
+## Support
+
+If you like this project you can [buy me a coffee](https://www.buymeacoffee.com/hanis).
+
+<a href="https://www.buymeacoffee.com/hanis" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>

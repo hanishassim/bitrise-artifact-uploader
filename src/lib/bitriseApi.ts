@@ -125,99 +125,103 @@ export function uploadArtifact(
   onProgress: (progress: UploadProgress) => void,
   abortController: AbortController
 ): Promise<UploadResult> {
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const artifactId = generateUUID();
-    
-    // Step 1: Get upload URL from Bitrise API
-    const uploadUrlResult = await getUploadUrl(apiToken, appId, artifactId, file.name, file.size);
-    
-    if (!uploadUrlResult.success || !uploadUrlResult.data) {
-      resolve({
-        success: false,
-        message: uploadUrlResult.error || 'Failed to get upload URL',
-      });
-      return;
-    }
 
-    const uploadInfo = uploadUrlResult.data;
-    
-    // Step 2: Upload to Google Cloud Storage using the provided URL and headers
-    const xhr = new XMLHttpRequest();
-    const startTime = Date.now();
-    let lastLoaded = 0;
-    let lastTime = startTime;
+    const upload = async () => {
+      // Step 1: Get upload URL from Bitrise API
+      const uploadUrlResult = await getUploadUrl(apiToken, appId, artifactId, file.name, file.size);
 
-    xhr.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable) {
-        const now = Date.now();
-        const timeDiff = (now - lastTime) / 1000;
-        const loadedDiff = event.loaded - lastLoaded;
-        
-        const speed = timeDiff > 0 ? loadedDiff / timeDiff : 0;
-        const remaining = event.total - event.loaded;
-        const estimatedTimeRemaining = speed > 0 ? remaining / speed : 0;
-
-        onProgress({
-          loaded: event.loaded,
-          total: event.total,
-          percentage: Math.round((event.loaded / event.total) * 100),
-          speed,
-          estimatedTimeRemaining,
+      if (!uploadUrlResult.success || !uploadUrlResult.data) {
+        resolve({
+          success: false,
+          message: uploadUrlResult.error || 'Failed to get upload URL',
         });
-
-        lastLoaded = event.loaded;
-        lastTime = now;
+        return;
       }
-    });
 
-    xhr.addEventListener('load', async () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        // Step 3: Check artifact processing status
-        const statusResult = await checkArtifactStatus(apiToken, appId, artifactId);
-        
-        if (statusResult.success) {
-          resolve({
-            success: true,
-            message: 'Upload successful!',
-            artifactId,
+      const uploadInfo = uploadUrlResult.data;
+
+      // Step 2: Upload to Google Cloud Storage using the provided URL and headers
+      const xhr = new XMLHttpRequest();
+      const startTime = Date.now();
+      let lastLoaded = 0;
+      let lastTime = startTime;
+
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const now = Date.now();
+          const timeDiff = (now - lastTime) / 1000;
+          const loadedDiff = event.loaded - lastLoaded;
+
+          const speed = timeDiff > 0 ? loadedDiff / timeDiff : 0;
+          const remaining = event.total - event.loaded;
+          const estimatedTimeRemaining = speed > 0 ? remaining / speed : 0;
+
+          onProgress({
+            loaded: event.loaded,
+            total: event.total,
+            percentage: Math.round((event.loaded / event.total) * 100),
+            speed,
+            estimatedTimeRemaining,
           });
+
+          lastLoaded = event.loaded;
+          lastTime = now;
+        }
+      });
+
+      xhr.addEventListener('load', async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          // Step 3: Check artifact processing status
+          const statusResult = await checkArtifactStatus(apiToken, appId, artifactId);
+
+          if (statusResult.success) {
+            resolve({
+              success: true,
+              message: 'Upload successful!',
+              artifactId,
+            });
+          } else {
+            resolve({
+              success: false,
+              message: statusResult.error || 'Artifact processing failed',
+            });
+          }
         } else {
           resolve({
             success: false,
-            message: statusResult.error || 'Artifact processing failed',
+            message: `Upload failed: ${xhr.statusText}`,
           });
         }
-      } else {
+      });
+
+      xhr.addEventListener('error', () => {
         resolve({
           success: false,
-          message: `Upload failed: ${xhr.statusText}`,
+          message: 'Network error during upload',
         });
-      }
-    });
-
-    xhr.addEventListener('error', () => {
-      resolve({
-        success: false,
-        message: 'Network error during upload',
       });
-    });
 
-    xhr.addEventListener('abort', () => {
-      reject(new Error('Upload cancelled'));
-    });
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload cancelled'));
+      });
 
-    abortController.signal.addEventListener('abort', () => {
-      xhr.abort();
-    });
+      abortController.signal.addEventListener('abort', () => {
+        xhr.abort();
+      });
 
-    // Open connection with the method from Bitrise API
-    xhr.open(uploadInfo.method, uploadInfo.url);
-    
-    // Set headers from Bitrise API response
-    Object.values(uploadInfo.headers).forEach((header) => {
-      xhr.setRequestHeader(header.name, header.value);
-    });
+      // Open connection with the method from Bitrise API
+      xhr.open(uploadInfo.method, uploadInfo.url);
 
-    xhr.send(file);
+      // Set headers from Bitrise API response
+      Object.values(uploadInfo.headers).forEach((header) => {
+        xhr.setRequestHeader(header.name, header.value);
+      });
+
+      xhr.send(file);
+    };
+
+    upload();
   });
 }

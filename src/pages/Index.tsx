@@ -4,12 +4,27 @@ import { UploadZone } from '@/components/UploadZone';
 import { UploadHistory } from '@/components/UploadHistory';
 import { useUploadHistory } from '@/hooks/useUploadHistory';
 import { Rocket } from 'lucide-react';
+import { BitriseInstructionModal } from '@/components/BitriseInstructionModal';
 
 const Index = () => {
   const [apiToken, setApiToken] = useState('');
   const [appId, setAppId] = useState('');
   const [isConnected, setIsConnected] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { history, addRecord, clearHistory } = useUploadHistory();
+
+  const handleConnect = (newApiToken: string, newAppId: string) => {
+    setApiToken(newApiToken);
+    setAppId(newAppId);
+    setIsConnected(true);
+    setIsModalOpen(false);
+  };
+
+  const handleDisconnect = () => {
+    setApiToken('');
+    setAppId('');
+    setIsConnected(false);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
@@ -30,12 +45,10 @@ const Index = () => {
         {/* Main Content */}
         <div className="space-y-6">
           <AuthPanel
-            apiToken={apiToken}
-            appId={appId}
-            onApiTokenChange={setApiToken}
-            onAppIdChange={setAppId}
             isConnected={isConnected}
-            onConnectionChange={setIsConnected}
+            onConnect={() => setIsModalOpen(true)}
+            onDisconnect={handleDisconnect}
+            appId={appId}
           />
 
           <UploadZone
@@ -56,6 +69,11 @@ const Index = () => {
           Credentials are never stored • All processing happens in your browser
         </p>
       </div>
+      <BitriseInstructionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConnect={handleConnect}
+      />
     </div>
   );
 };

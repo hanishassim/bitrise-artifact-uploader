@@ -1,13 +1,17 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
 const RM_API_HOST = 'https://api.bitrise.io';
 
 serve(async (req) => {
+  const origin = req.headers.get('Origin');
+  // Allow requests from localhost on any port
+  const isAllowedOrigin = origin && /^http:\/\/localhost:\d+$/.test(origin);
+
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '*',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });

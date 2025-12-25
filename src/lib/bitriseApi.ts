@@ -12,6 +12,7 @@ export interface UploadResult {
   success: boolean;
   message: string;
   artifactId?: string;
+  publicInstallPageUrl?: string;
 }
 
 function generateUUID(): string {
@@ -77,12 +78,36 @@ async function getUploadUrl(
   }
 }
 
+async function getPublicInstallPageURL(
+  apiToken: string,
+  appId: string,
+  artifactId: string
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
+      body: { action: 'getPublicInstallPageURL', apiToken, appId, artifactId }
+    });
+
+    if (error) {
+      return { success: false, error: 'Network error while getting install URL' };
+    }
+
+    if (data.status === 200) {
+      return { success: true, url: data.data.url };
+    } else {
+      return { success: false, error: data.data?.message || `Failed to get install URL` };
+    }
+  } catch (error) {
+    return { success: false, error: 'Network error while getting install URL' };
+  }
+}
+
 async function checkArtifactStatus(
   apiToken: string,
   appId: string,
   artifactId: string,
   retryCount = 0
-): Promise<{ success: boolean; status?: string; error?: string }> {
+): Promise<{ success: boolean; status?: string; publicInstallPageUrl?: string; error?: string }> {
   if (retryCount >= 10) {
     return { success: false, error: 'Artifact processing timed out after 10 retries' };
   }
@@ -103,7 +128,14 @@ async function checkArtifactStatus(
     const status = data.data.status;
 
     if (status === 'processed_valid') {
-      return { success: true, status };
+      // Artifact is ready, now get the public install page URL
+      const urlResult = await getPublicInstallPageURL(apiToken, appId, artifactId);
+      if (urlResult.success) {
+        return { success: true, status, publicInstallPageUrl: urlResult.url };
+      } else {
+        // Still treat as success from upload perspective, but URL is missing.
+        return { success: true, status, error: urlResult.error };
+      }
     } else if (status === 'processed_invalid') {
       return { success: false, error: 'Artifact was processed but is invalid' };
     } else if (status === 'uploaded' || status === 'upload_requested') {
@@ -174,12 +206,13 @@ export function uploadArtifact(
       if (xhr.status >= 200 && xhr.status < 300) {
         // Step 3: Check artifact processing status
         const statusResult = await checkArtifactStatus(apiToken, appId, artifactId);
-        
+
         if (statusResult.success) {
           resolve({
             success: true,
             message: 'Upload successful!',
             artifactId,
+            publicInstallPageUrl: statusResult.publicInstallPageUrl,
           });
         } else {
           resolve({

@@ -8,6 +8,7 @@ export interface UploadRecord {
   uploadDate: string;
   status: 'success' | 'failed';
   sha256Hash: string;
+  publicInstallPageUrl?: string;
 }
 
 const STORAGE_KEY = 'bitrise-upload-history';

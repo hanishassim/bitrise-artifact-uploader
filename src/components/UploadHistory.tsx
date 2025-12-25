@@ -2,7 +2,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { History, Trash2, FileUp, CheckCircle, XCircle } from 'lucide-react';
+import { History, Trash2, FileUp, CheckCircle, XCircle, ExternalLink } from 'lucide-react';
 import { UploadRecord } from '@/hooks/useUploadHistory';
 import { formatFileSize } from '@/lib/fileHash';
 
@@ -68,10 +68,10 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
               {history.map((record) => (
                 <div
                   key={record.id}
-                  className="group rounded-lg border border-border/50 bg-background/50 p-3 transition-colors hover:bg-muted/50"
+                  className="group flex items-center justify-between rounded-lg border border-border/50 bg-background/50 p-3 transition-colors hover:bg-muted/50"
                 >
-                  <div className="flex items-start gap-3">
-                    <div className="mt-0.5">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <div className="mt-0.5 flex-shrink-0">
                       {record.status === 'success' ? (
                         <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
                       ) : (
@@ -80,8 +80,13 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-medium">{record.fileName}</p>
-                        <Badge variant={getFileTypeBadgeVariant(record.fileType)} className="text-xs uppercase">
+                        <p className="truncate text-sm font-medium" title={record.fileName}>
+                          {record.fileName}
+                        </p>
+                        <Badge
+                          variant={getFileTypeBadgeVariant(record.fileType)}
+                          className="flex-shrink-0 text-xs uppercase"
+                        >
                           {record.fileType}
                         </Badge>
                       </div>
@@ -90,11 +95,28 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
                         <span>•</span>
                         <span>{formatDate(record.uploadDate)}</span>
                       </div>
-                      <p className="mt-1 truncate font-mono text-xs text-muted-foreground/70">
+                      <p
+                        className="mt-1 truncate font-mono text-xs text-muted-foreground/70"
+                        title={record.sha256Hash}
+                      >
                         {record.sha256Hash.substring(0, 32)}...
                       </p>
                     </div>
                   </div>
+
+                  {record.publicInstallPageUrl && (
+                    <a
+                      href={record.publicInstallPageUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-4 flex-shrink-0"
+                    >
+                      <Button variant="outline" size="sm">
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        View
+                      </Button>
+                    </a>
+                  )}
                 </div>
               ))}
             </div>

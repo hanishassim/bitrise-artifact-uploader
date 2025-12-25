@@ -87,10 +87,15 @@ serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Bitrise proxy error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    // Log error server-side for debugging (without sensitive data)
+    console.error('Bitrise proxy error:', {
+      action: req.method,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
+    
+    // Return generic error to client
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'Request processing failed' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

@@ -1,3 +1,5 @@
+import { supabase } from "@/integrations/supabase/client";
+
 export interface UploadProgress {
   loaded: number;
   total: number;
@@ -12,8 +14,6 @@ export interface UploadResult {
   artifactId?: string;
 }
 
-const RM_API_HOST = 'https://api.bitrise.io';
-
 function generateUUID(): string {
   const hex = Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map(b => b.toString(16).padStart(2, '0'))
@@ -23,25 +23,22 @@ function generateUUID(): string {
 
 export async function testConnection(apiToken: string, appId: string): Promise<{ success: boolean; message: string }> {
   try {
-    // Using v1 API endpoint
-    const response = await fetch(
-      `${RM_API_HOST}/release-management/v1/connected-apps/${appId}`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': apiToken,
-        },
-      }
-    );
+    const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
+      body: { action: 'testConnection', apiToken, appId }
+    });
 
-    if (response.ok) {
+    if (error) {
+      return { success: false, message: 'Network error. Please check your connection.' };
+    }
+
+    if (data.status === 200) {
       return { success: true, message: 'Connection successful!' };
-    } else if (response.status === 401) {
+    } else if (data.status === 401) {
       return { success: false, message: 'Invalid API token' };
-    } else if (response.status === 404) {
+    } else if (data.status === 404) {
       return { success: false, message: 'App not found or not connected to Release Management' };
     } else {
-      return { success: false, message: `Connection failed: ${response.statusText}` };
+      return { success: false, message: `Connection failed: ${data.data?.message || 'Unknown error'}` };
     }
   } catch (error) {
     return { success: false, message: 'Network error. Please check your connection.' };
@@ -61,22 +58,19 @@ async function getUploadUrl(
   fileName: string,
   fileSizeBytes: number
 ): Promise<{ success: boolean; data?: UploadUrlResponse; error?: string }> {
-  const url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/upload-url?file_name=${encodeURIComponent(fileName)}&file_size_bytes=${fileSizeBytes}`;
-  
   try {
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Authorization': apiToken,
-      },
+    const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
+      body: { action: 'getUploadUrl', apiToken, appId, artifactId, fileName, fileSizeBytes }
     });
 
-    if (response.ok) {
-      const data = await response.json();
-      return { success: true, data };
+    if (error) {
+      return { success: false, error: 'Network error while getting upload URL' };
+    }
+
+    if (data.status === 200) {
+      return { success: true, data: data.data };
     } else {
-      const errorData = await response.json().catch(() => ({}));
-      return { success: false, error: errorData.message || `Failed to get upload URL: ${response.statusText}` };
+      return { success: false, error: data.data?.message || `Failed to get upload URL` };
     }
   } catch (error) {
     return { success: false, error: 'Network error while getting upload URL' };
@@ -94,22 +88,19 @@ async function checkArtifactStatus(
   }
 
   try {
-    const response = await fetch(
-      `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/status`,
-      {
-        method: 'GET',
-        headers: {
-          'Authorization': apiToken,
-        },
-      }
-    );
+    const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
+      body: { action: 'checkStatus', apiToken, appId, artifactId }
+    });
 
-    if (!response.ok) {
-      return { success: false, error: `Failed to check status: ${response.statusText}` };
+    if (error) {
+      return { success: false, error: 'Network error while checking status' };
     }
 
-    const data = await response.json();
-    const status = data.status;
+    if (data.status !== 200) {
+      return { success: false, error: `Failed to check status` };
+    }
+
+    const status = data.data.status;
 
     if (status === 'processed_valid') {
       return { success: true, status };

@@ -8,10 +8,17 @@ export interface UploadProgress {
   estimatedTimeRemaining: number; // seconds
 }
 
+export interface ArtifactStatus {
+  status: string;
+  installable_artifact_url?: string;
+  public_install_page_url?: string;
+}
+
 export interface UploadResult {
   success: boolean;
   message: string;
   artifactId?: string;
+  artifactStatus?: ArtifactStatus;
 }
 
 function generateUUID(): string {
@@ -82,7 +89,7 @@ async function checkArtifactStatus(
   appId: string,
   artifactId: string,
   retryCount = 0
-): Promise<{ success: boolean; status?: string; error?: string }> {
+): Promise<{ success: boolean; data?: ArtifactStatus; error?: string }> {
   if (retryCount >= 10) {
     return { success: false, error: 'Artifact processing timed out after 10 retries' };
   }
@@ -103,7 +110,14 @@ async function checkArtifactStatus(
     const status = data.data.status;
 
     if (status === 'processed_valid') {
-      return { success: true, status };
+      return { 
+        success: true, 
+        data: {
+          status: data.data.status,
+          installable_artifact_url: data.data.installable_artifact_url,
+          public_install_page_url: data.data.public_install_page_url,
+        }
+      };
     } else if (status === 'processed_invalid') {
       return { success: false, error: 'Artifact was processed but is invalid' };
     } else if (status === 'uploaded' || status === 'upload_requested') {
@@ -180,6 +194,7 @@ export function uploadArtifact(
             success: true,
             message: 'Upload successful!',
             artifactId,
+            artifactStatus: statusResult.data,
           });
         } else {
           resolve({

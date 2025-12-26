@@ -2,89 +2,89 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Bitrise-inspired design system. All colors MUST be HSL. */
+/* Bitrise-inspired design system - Vibrant purple theme. All colors MUST be HSL. */
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 270 30% 15%;
+    --background: 270 25% 98%;
+    --foreground: 270 40% 12%;
 
     --card: 0 0% 100%;
-    --card-foreground: 270 30% 15%;
+    --card-foreground: 270 40% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 270 30% 15%;
+    --popover-foreground: 270 40% 12%;
 
-    /* Bitrise purple */
-    --primary: 270 50% 40%;
+    /* Bitrise vibrant purple */
+    --primary: 268 75% 55%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 270 20% 95%;
-    --secondary-foreground: 270 30% 25%;
+    --secondary: 268 50% 94%;
+    --secondary-foreground: 268 60% 35%;
 
-    --muted: 270 15% 96%;
-    --muted-foreground: 270 10% 45%;
+    --muted: 270 30% 95%;
+    --muted-foreground: 270 15% 40%;
 
-    --accent: 270 40% 92%;
-    --accent-foreground: 270 50% 30%;
+    --accent: 268 60% 90%;
+    --accent-foreground: 268 70% 40%;
 
-    --destructive: 0 84.2% 60.2%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 270 15% 90%;
-    --input: 270 15% 90%;
-    --ring: 270 50% 40%;
+    --border: 270 30% 88%;
+    --input: 270 30% 88%;
+    --ring: 268 75% 55%;
 
-    --radius: 0.5rem;
+    --radius: 0.625rem;
 
-    --sidebar-background: 270 30% 20%;
-    --sidebar-foreground: 270 10% 95%;
-    --sidebar-primary: 270 50% 60%;
+    --sidebar-background: 268 45% 18%;
+    --sidebar-foreground: 270 15% 95%;
+    --sidebar-primary: 268 80% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 30% 30%;
-    --sidebar-accent-foreground: 270 10% 95%;
-    --sidebar-border: 270 20% 30%;
-    --sidebar-ring: 270 50% 60%;
+    --sidebar-accent: 268 40% 28%;
+    --sidebar-accent-foreground: 270 15% 95%;
+    --sidebar-border: 268 35% 28%;
+    --sidebar-ring: 268 80% 65%;
   }
 
   .dark {
-    --background: 270 30% 8%;
-    --foreground: 270 10% 95%;
+    --background: 268 35% 7%;
+    --foreground: 270 15% 95%;
 
-    --card: 270 25% 12%;
-    --card-foreground: 270 10% 95%;
+    --card: 268 30% 11%;
+    --card-foreground: 270 15% 95%;
 
-    --popover: 270 25% 12%;
-    --popover-foreground: 270 10% 95%;
+    --popover: 268 30% 11%;
+    --popover-foreground: 270 15% 95%;
 
-    /* Bitrise purple - lighter for dark mode */
-    --primary: 270 50% 60%;
-    --primary-foreground: 270 30% 10%;
+    /* Bitrise vibrant purple - adjusted for dark mode */
+    --primary: 268 80% 65%;
+    --primary-foreground: 268 40% 8%;
 
-    --secondary: 270 20% 18%;
-    --secondary-foreground: 270 10% 90%;
+    --secondary: 268 30% 18%;
+    --secondary-foreground: 270 15% 90%;
 
-    --muted: 270 20% 15%;
-    --muted-foreground: 270 10% 60%;
+    --muted: 268 25% 14%;
+    --muted-foreground: 270 15% 60%;
 
-    --accent: 270 25% 20%;
-    --accent-foreground: 270 10% 95%;
+    --accent: 268 35% 22%;
+    --accent-foreground: 270 15% 95%;
 
-    --destructive: 0 62.8% 50%;
+    --destructive: 0 65% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 270 20% 20%;
-    --input: 270 20% 20%;
-    --ring: 270 50% 60%;
+    --border: 268 25% 20%;
+    --input: 268 25% 20%;
+    --ring: 268 80% 65%;
 
-    --sidebar-background: 270 30% 10%;
-    --sidebar-foreground: 270 10% 95%;
-    --sidebar-primary: 270 50% 60%;
+    --sidebar-background: 268 35% 8%;
+    --sidebar-foreground: 270 15% 95%;
+    --sidebar-primary: 268 80% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 270 25% 18%;
-    --sidebar-accent-foreground: 270 10% 95%;
-    --sidebar-border: 270 20% 18%;
-    --sidebar-ring: 270 50% 60%;
+    --sidebar-accent: 268 30% 16%;
+    --sidebar-accent-foreground: 270 15% 95%;
+    --sidebar-border: 268 25% 18%;
+    --sidebar-ring: 268 80% 65%;
   }
 }
 

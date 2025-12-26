@@ -3,13 +3,19 @@ import { AuthPanel } from '@/components/AuthPanel';
 import { UploadZone } from '@/components/UploadZone';
 import { UploadHistory } from '@/components/UploadHistory';
 import { useUploadHistory } from '@/hooks/useUploadHistory';
+import { usePersistedCredentials } from '@/hooks/usePersistedCredentials';
+import { useLastArtifact } from '@/hooks/useLastArtifact';
 import { Rocket } from 'lucide-react';
 
 const Index = () => {
-  const [apiToken, setApiToken] = useState('');
-  const [appId, setAppId] = useState('');
+  const { apiToken, appId, isLoaded, setApiToken, setAppId } = usePersistedCredentials();
+  const { lastArtifact, saveLastArtifact, clearLastArtifact } = useLastArtifact();
   const [isConnected, setIsConnected] = useState(false);
   const { history, addRecord, clearHistory } = useUploadHistory();
+
+  if (!isLoaded) {
+    return null; // Wait for credentials to load
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/30">
@@ -50,6 +56,9 @@ const Index = () => {
               appId={appId}
               isConnected={isConnected}
               onUploadComplete={addRecord}
+              lastArtifact={lastArtifact}
+              onFileSave={saveLastArtifact}
+              onClearLastArtifact={clearLastArtifact}
             />
 
             <UploadHistory

@@ -2,22 +2,26 @@ import { useState, useRef, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Upload, FileUp, X, CheckCircle, XCircle, Loader2, Shield } from 'lucide-react';
+import { Upload, FileUp, X, CheckCircle, XCircle, Loader2, Shield, RotateCcw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { calculateSHA256, formatFileSize, isValidArtifactFile, getFileExtension } from '@/lib/fileHash';
 import { uploadArtifact, UploadProgress } from '@/lib/bitriseApi';
 import { UploadRecord } from '@/hooks/useUploadHistory';
+import { LastArtifactInfo } from '@/hooks/useLastArtifact';
 
 interface UploadZoneProps {
   apiToken: string;
   appId: string;
   isConnected: boolean;
   onUploadComplete: (record: Omit<UploadRecord, 'id' | 'uploadDate'>) => void;
+  lastArtifact: LastArtifactInfo | null;
+  onFileSave: (file: File) => void;
+  onClearLastArtifact: () => void;
 }
 
 type UploadState = 'idle' | 'hashing' | 'uploading' | 'success' | 'error';
 
-export function UploadZone({ apiToken, appId, isConnected, onUploadComplete }: UploadZoneProps) {
+export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, lastArtifact, onFileSave, onClearLastArtifact }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileHash, setFileHash] = useState<string>('');
@@ -36,6 +40,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete }: U
     }
 
     setSelectedFile(file);
+    onFileSave(file);
     setUploadState('hashing');
     setErrorMessage('');
     setFileHash('');
@@ -48,7 +53,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete }: U
       setErrorMessage('Failed to calculate file hash');
       setUploadState('error');
     }
-  }, []);
+  }, [onFileSave]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -133,6 +138,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete }: U
     setUploadState('idle');
     setProgress(null);
     setErrorMessage('');
+    onClearLastArtifact();
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -159,34 +165,56 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete }: U
         />
 
         {!selectedFile ? (
-          <div
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            onClick={() => isConnected && fileInputRef.current?.click()}
-            className={cn(
-              'relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all duration-300',
-              isDragging
-                ? 'border-primary bg-primary/5 scale-[1.02]'
-                : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50',
-              !isConnected && 'cursor-not-allowed opacity-50'
-            )}
-          >
-            <div className={cn(
-              'flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 transition-transform duration-300',
-              isDragging && 'scale-110'
-            )}>
-              <Upload className={cn(
-                'h-8 w-8 text-primary transition-transform duration-300',
-                isDragging && 'animate-bounce'
-              )} />
+          <div className="space-y-4">
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={() => isConnected && fileInputRef.current?.click()}
+              className={cn(
+                'relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all duration-300',
+                isDragging
+                  ? 'border-primary bg-primary/5 scale-[1.02]'
+                  : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50',
+                !isConnected && 'cursor-not-allowed opacity-50'
+              )}
+            >
+              <div className={cn(
+                'flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 transition-transform duration-300',
+                isDragging && 'scale-110'
+              )}>
+                <Upload className={cn(
+                  'h-8 w-8 text-primary transition-transform duration-300',
+                  isDragging && 'animate-bounce'
+                )} />
+              </div>
+              <p className="mt-4 text-center font-medium text-foreground">
+                {isConnected ? 'Drop your artifact here' : 'Connect to Bitrise first'}
+              </p>
+              <p className="mt-1 text-center text-sm text-muted-foreground">
+                {isConnected ? 'or click to browse • IPA, APK, AAB supported' : 'Test your connection above to enable uploads'}
+              </p>
             </div>
-            <p className="mt-4 text-center font-medium text-foreground">
-              {isConnected ? 'Drop your artifact here' : 'Connect to Bitrise first'}
-            </p>
-            <p className="mt-1 text-center text-sm text-muted-foreground">
-              {isConnected ? 'or click to browse • IPA, APK, AAB supported' : 'Test your connection above to enable uploads'}
-            </p>
+
+            {/* Last used artifact prompt */}
+            {lastArtifact && isConnected && (
+              <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-3">
+                <RotateCcw className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground">Last used:</p>
+                  <p className="text-sm font-medium text-foreground truncate">{lastArtifact.name}</p>
+                  <p className="text-xs text-muted-foreground">{formatFileSize(lastArtifact.size)}</p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex-shrink-0"
+                >
+                  Re-select File
+                </Button>
+              </div>
+            )}
           </div>
         ) : (
           <div className="space-y-4">

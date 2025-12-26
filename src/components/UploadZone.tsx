@@ -2,12 +2,13 @@ import { useState, useRef, useCallback } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { Upload, FileUp, X, CheckCircle, XCircle, Loader2, Shield, RotateCcw } from 'lucide-react';
+import { Upload, FileUp, X, CheckCircle, XCircle, Loader2, Shield, RotateCcw, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { calculateSHA256, formatFileSize, isValidArtifactFile, getFileExtension } from '@/lib/fileHash';
-import { uploadArtifact, UploadProgress } from '@/lib/bitriseApi';
+import { uploadArtifact, UploadProgress, ArtifactStatus } from '@/lib/bitriseApi';
 import { UploadRecord } from '@/hooks/useUploadHistory';
 import { LastArtifactInfo } from '@/hooks/useLastArtifact';
+import { toast } from '@/hooks/use-toast';
 
 interface UploadZoneProps {
   apiToken: string;
@@ -29,6 +30,8 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [abortController, setAbortController] = useState<AbortController | null>(null);
+  const [artifactStatus, setArtifactStatus] = useState<ArtifactStatus | null>(null);
+  const [copied, setCopied] = useState(false);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -84,6 +87,8 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
     setAbortController(controller);
     setUploadState('uploading');
     setProgress(null);
+    setArtifactStatus(null);
+    setCopied(false);
 
     try {
       const result = await uploadArtifact(
@@ -96,6 +101,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
 
       if (result.success) {
         setUploadState('success');
+        setArtifactStatus(result.artifactStatus || null);
         onUploadComplete({
           fileName: selectedFile.name,
           fileType: getFileExtension(selectedFile.name) as 'ipa' | 'apk' | 'aab',
@@ -138,8 +144,31 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
     setUploadState('idle');
     setProgress(null);
     setErrorMessage('');
+    setArtifactStatus(null);
+    setCopied(false);
     onClearLastArtifact();
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleCopyLink = async () => {
+    const url = artifactStatus?.public_install_page_url;
+    if (!url) return;
+    
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      toast({
+        title: 'Link copied!',
+        description: 'Install page URL copied to clipboard',
+      });
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast({
+        title: 'Copy failed',
+        description: 'Please copy the link manually',
+        variant: 'destructive',
+      });
+    }
   };
 
   const formatSpeed = (bytesPerSecond: number) => {
@@ -269,9 +298,36 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
 
             {/* Status Messages */}
             {uploadState === 'success' && (
-              <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                <CheckCircle className="h-4 w-4" />
-                <span>Upload successful!</span>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>Upload successful!</span>
+                </div>
+                
+                {artifactStatus?.public_install_page_url && (
+                  <div className="rounded-lg border border-border/50 bg-muted/30 p-4">
+                    <p className="mb-2 text-sm font-medium text-muted-foreground">Copy and share the link</p>
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1 rounded-lg border border-border/50 bg-background px-3 py-2">
+                        <p className="truncate text-sm text-primary break-all">
+                          {artifactStatus.public_install_page_url}
+                        </p>
+                      </div>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={handleCopyLink}
+                        className="flex-shrink-0"
+                      >
+                        {copied ? (
+                          <Check className="h-4 w-4 text-green-600" />
+                        ) : (
+                          <Copy className="h-4 w-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

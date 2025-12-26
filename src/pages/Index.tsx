@@ -12,12 +12,12 @@ const Index = () => {
   const { history, addRecord, clearHistory } = useUploadHistory();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20">
-      <div className="container max-w-3xl py-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/10 via-background to-accent/30">
+      <div className="container max-w-7xl py-8 px-4">
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 shadow-lg">
-            <Rocket className="h-8 w-8 text-primary" />
+          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-primary/70 shadow-lg">
+            <Rocket className="h-8 w-8 text-primary-foreground" />
           </div>
           <h1 className="text-3xl font-bold tracking-tight text-foreground">
             Bitrise Artifact Uploader
@@ -27,28 +27,36 @@ const Index = () => {
           </p>
         </div>
 
-        {/* Main Content */}
-        <div className="space-y-6">
-          <AuthPanel
-            apiToken={apiToken}
-            appId={appId}
-            onApiTokenChange={setApiToken}
-            onAppIdChange={setAppId}
-            isConnected={isConnected}
-            onConnectionChange={setIsConnected}
-          />
+        {/* 2-Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* Left Column - Authentication */}
+          <div className="lg:col-span-4">
+            <div className="lg:sticky lg:top-8">
+              <AuthPanel
+                apiToken={apiToken}
+                appId={appId}
+                onApiTokenChange={setApiToken}
+                onAppIdChange={setAppId}
+                isConnected={isConnected}
+                onConnectionChange={setIsConnected}
+              />
+            </div>
+          </div>
 
-          <UploadZone
-            apiToken={apiToken}
-            appId={appId}
-            isConnected={isConnected}
-            onUploadComplete={addRecord}
-          />
+          {/* Right Column - Uploader and History */}
+          <div className="lg:col-span-8 space-y-6">
+            <UploadZone
+              apiToken={apiToken}
+              appId={appId}
+              isConnected={isConnected}
+              onUploadComplete={addRecord}
+            />
 
-          <UploadHistory
-            history={history}
-            onClearHistory={clearHistory}
-          />
+            <UploadHistory
+              history={history}
+              onClearHistory={clearHistory}
+            />
+          </div>
         </div>
 
         {/* Footer */}

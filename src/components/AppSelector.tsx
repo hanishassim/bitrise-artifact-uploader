@@ -1,0 +1,272 @@
+import { useState, useEffect, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Search, Smartphone, Apple, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { listConnectedApps, ConnectedApp } from '@/lib/bitriseApi';
+
+interface AppSelectorProps {
+  apiToken: string;
+  isConnected: boolean;
+  selectedAppId: string | null;
+  lastUsedAppId: string | null;
+  onAppSelect: (app: ConnectedApp) => void;
+}
+
+const WORKSPACE_ID = '7df0c6a424a76e9d';
+
+export function AppSelector({ 
+  apiToken, 
+  isConnected, 
+  selectedAppId, 
+  lastUsedAppId,
+  onAppSelect 
+}: AppSelectorProps) {
+  const [apps, setApps] = useState<ConnectedApp[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [platformFilter, setPlatformFilter] = useState<'all' | 'ios' | 'android'>('all');
+
+  const fetchApps = async () => {
+    if (!isConnected || !apiToken) return;
+    
+    setIsLoading(true);
+    setError(null);
+    
+    const result = await listConnectedApps(apiToken, WORKSPACE_ID);
+    
+    if (result.success && result.data) {
+      setApps(result.data);
+    } else {
+      setError(result.error || 'Failed to load apps');
+    }
+    
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchApps();
+  }, [isConnected, apiToken]);
+
+  const filteredApps = useMemo(() => {
+    return apps.filter(app => {
+      // Platform filter
+      if (platformFilter !== 'all') {
+        if (platformFilter === 'ios' && app.platform !== 'ios') return false;
+        if (platformFilter === 'android' && app.platform !== 'android') return false;
+      }
+      
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        return (
+          app.app_name?.toLowerCase().includes(query) ||
+          app.project_title?.toLowerCase().includes(query)
+        );
+      }
+      
+      return true;
+    });
+  }, [apps, platformFilter, searchQuery]);
+
+  // Sort apps to show last used first
+  const sortedApps = useMemo(() => {
+    if (!lastUsedAppId) return filteredApps;
+    
+    return [...filteredApps].sort((a, b) => {
+      if (a.id === lastUsedAppId) return -1;
+      if (b.id === lastUsedAppId) return 1;
+      return 0;
+    });
+  }, [filteredApps, lastUsedAppId]);
+
+  if (!isConnected) {
+    return (
+      <Card className="border-dashed">
+        <CardContent className="py-8">
+          <div className="flex flex-col items-center justify-center text-center">
+            <Smartphone className="h-12 w-12 text-muted-foreground/50 mb-3" />
+            <p className="text-sm text-muted-foreground">
+              Connect to Bitrise to view your apps
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Select App</CardTitle>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={fetchApps}
+            disabled={isLoading}
+          >
+            <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Search and Filter */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search apps..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex gap-1">
+            <Button
+              variant={platformFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setPlatformFilter('all')}
+              className="px-3"
+            >
+              All
+            </Button>
+            <Button
+              variant={platformFilter === 'ios' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => setPlatformFilter('ios')}
+              title="iOS apps"
+            >
+              <Apple className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={platformFilter === 'android' ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => setPlatformFilter('android')}
+              title="Android apps"
+            >
+              <Smartphone className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+
+        {/* Error State */}
+        {error && (
+          <div className="flex items-center gap-2 rounded-lg bg-destructive/10 p-3 text-destructive">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <p className="text-sm">{error}</p>
+            <Button variant="ghost" size="sm" onClick={fetchApps} className="ml-auto">
+              Retry
+            </Button>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+                <Skeleton className="h-10 w-10 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-32" />
+                  <Skeleton className="h-3 w-48" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Apps List */}
+        {!isLoading && !error && (
+          <ScrollArea className="h-[300px] pr-4">
+            <div className="space-y-2">
+              {sortedApps.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <Smartphone className="h-8 w-8 text-muted-foreground/50 mb-2" />
+                  <p className="text-sm text-muted-foreground">
+                    {searchQuery || platformFilter !== 'all' 
+                      ? 'No apps match your filter' 
+                      : 'No connected apps found'}
+                  </p>
+                </div>
+              ) : (
+                sortedApps.map((app) => (
+                  <button
+                    key={app.id}
+                    onClick={() => onAppSelect(app)}
+                    className={`w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all hover:bg-accent/50 ${
+                      selectedAppId === app.id 
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary' 
+                        : 'hover:border-primary/50'
+                    }`}
+                  >
+                    {/* App Icon */}
+                    <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                      {app.icon_url ? (
+                        <img 
+                          src={app.icon_url} 
+                          alt={app.app_name || 'App icon'} 
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          {app.platform === 'ios' ? (
+                            <Apple className="h-5 w-5 text-muted-foreground" />
+                          ) : (
+                            <Smartphone className="h-5 w-5 text-muted-foreground" />
+                          )}
+                        </div>
+                      )}
+                      {/* Platform badge */}
+                      <div className={`absolute -bottom-1 -right-1 rounded-full p-0.5 ${
+                        app.platform === 'ios' ? 'bg-gray-800' : 'bg-green-600'
+                      }`}>
+                        {app.platform === 'ios' ? (
+                          <Apple className="h-2.5 w-2.5 text-white" />
+                        ) : (
+                          <Smartphone className="h-2.5 w-2.5 text-white" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* App Info */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium truncate">
+                          {app.app_name || 'Unnamed App'}
+                        </p>
+                        {app.id === lastUsedAppId && (
+                          <span className="flex-shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
+                            Last used
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {app.project_title}
+                      </p>
+                      {app.store_app_id && (
+                        <p className="text-xs text-muted-foreground/70 truncate">
+                          ID: {app.store_app_id}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Selected indicator */}
+                    {selectedAppId === app.id && (
+                      <div className="flex-shrink-0 rounded-full bg-primary p-1">
+                        <Check className="h-3 w-3 text-primary-foreground" />
+                      </div>
+                    )}
+                  </button>
+                ))
+              )}
+            </div>
+          </ScrollArea>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

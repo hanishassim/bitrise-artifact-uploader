@@ -18,13 +18,13 @@ serve(async (req) => {
   }
 
   try {
-    const { action, apiToken, appId, artifactId, fileName, fileSizeBytes } = await req.json();
+    const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes } = await req.json();
 
     console.log(`Bitrise proxy action: ${action}`);
 
-    if (!apiToken || !appId) {
+    if (!apiToken) {
       return new Response(
-        JSON.stringify({ error: 'Missing apiToken or appId' }),
+        JSON.stringify({ error: 'Missing apiToken' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -33,7 +33,28 @@ serve(async (req) => {
     let url: string;
 
     switch (action) {
+      case 'listConnectedApps':
+        if (!workspaceId) {
+          return new Response(
+            JSON.stringify({ error: 'Missing workspaceId' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        url = `${RM_API_HOST}/release-management/v1/workspaces/${workspaceId}/connected-apps?items_per_page=50`;
+        console.log(`Listing connected apps from: ${url}`);
+        response = await fetch(url, {
+          method: 'GET',
+          headers: { 'Authorization': apiToken },
+        });
+        break;
+
       case 'testConnection':
+        if (!appId) {
+          return new Response(
+            JSON.stringify({ error: 'Missing appId' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}`;
         console.log(`Testing connection to: ${url}`);
         response = await fetch(url, {
@@ -43,6 +64,12 @@ serve(async (req) => {
         break;
 
       case 'getUploadUrl':
+        if (!appId) {
+          return new Response(
+            JSON.stringify({ error: 'Missing appId' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         if (!artifactId || !fileName || !fileSizeBytes) {
           return new Response(
             JSON.stringify({ error: 'Missing artifactId, fileName, or fileSizeBytes' }),
@@ -58,6 +85,12 @@ serve(async (req) => {
         break;
 
       case 'checkStatus':
+        if (!appId) {
+          return new Response(
+            JSON.stringify({ error: 'Missing appId' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
         if (!artifactId) {
           return new Response(
             JSON.stringify({ error: 'Missing artifactId' }),

@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -35,7 +35,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
   const [abortController, setAbortController] = useState<AbortController | null>(null);
   const [artifactStatus, setArtifactStatus] = useState<ArtifactStatus | null>(null);
   const [copied, setCopied] = useState(false);
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = useCallback(async (file: File) => {
@@ -172,7 +172,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
   const handleCopyLink = async () => {
     const url = artifactStatus?.public_install_page_url;
     if (!url) return;
-    
+
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
@@ -246,7 +246,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
 
             {/* Last used artifact hint */}
             {lastArtifact && isConnected && (
-              <div 
+              <div
                 onClick={() => fileInputRef.current?.click()}
                 className="group cursor-pointer rounded-lg border border-primary/30 bg-primary/5 p-4 transition-all hover:border-primary/50 hover:bg-primary/10"
               >
@@ -295,7 +295,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
 
             {/* What's New Input */}
             {fileHash && uploadState === 'idle' && (
-            <div className="space-y-2">
+              <div className="space-y-2">
                 <p className="text-sm font-medium text-muted-foreground">What's new? (Optional)</p>
                 <Textarea
                   value={whatsNew}
@@ -338,7 +338,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
                   <CheckCircle className="h-4 w-4" />
                   <span>Upload successful!</span>
                 </div>
-                
+
                 {artifactStatus?.public_install_page_url && (
                   <div className="space-y-4 rounded-lg border border-border/50 bg-muted/30 p-4">
                     <div>
@@ -357,7 +357,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
                     <div className="text-center">
                       <p className="mb-2 text-sm font-medium text-muted-foreground">Scan this QR code on your device</p>
                       <div className="inline-block rounded-lg bg-white p-2">
-                        <QRCode value={artifactStatus.public_install_page_url} size={128} />
+                        <QRCodeSVG value={artifactStatus.public_install_page_url} size={128} />
                       </div>
                     </div>
                   </div>

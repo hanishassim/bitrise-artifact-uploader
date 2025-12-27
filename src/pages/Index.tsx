@@ -4,20 +4,31 @@ import { BitriseGuide } from '@/components/BitriseGuide';
 import { AppSelector } from '@/components/AppSelector';
 import { UploadZone } from '@/components/UploadZone';
 import { UploadHistory } from '@/components/UploadHistory';
+import { CurlLogPanel } from '@/components/CurlLogPanel';
 import { useUploadHistory } from '@/hooks/useUploadHistory';
 import { usePersistedCredentials } from '@/hooks/usePersistedCredentials';
 import { useLastArtifact } from '@/hooks/useLastArtifact';
 import { useLastUsedApp } from '@/hooks/useLastUsedApp';
+import { useCurlLogs } from '@/hooks/useCurlLogs';
 import { ConnectedApp } from '@/lib/bitriseApi';
 import { Rocket } from 'lucide-react';
 
 const Index = () => {
-  const { apiToken, appId, isLoaded, setApiToken, setAppId } = usePersistedCredentials();
+  const {
+    apiToken,
+    appId,
+    workspaceId,
+    isLoaded,
+    setApiToken,
+    setAppId,
+    setWorkspaceId,
+  } = usePersistedCredentials();
   const { lastArtifact, saveLastArtifact, clearLastArtifact } = useLastArtifact();
   const { lastUsedAppId, saveLastUsedApp } = useLastUsedApp();
   const [isConnected, setIsConnected] = useState(false);
   const [selectedApp, setSelectedApp] = useState<ConnectedApp | null>(null);
   const { history, addRecord, clearHistory } = useUploadHistory();
+  const { logs, addLog, clearLogs } = useCurlLogs();
 
   const handleAppSelect = (app: ConnectedApp) => {
     setSelectedApp(app);
@@ -52,11 +63,12 @@ const Index = () => {
             <div className="lg:sticky lg:top-8 space-y-6">
               <AuthPanel
                 apiToken={apiToken}
-                appId={appId}
+                workspaceId={workspaceId}
                 onApiTokenChange={setApiToken}
-                onAppIdChange={setAppId}
+                onWorkspaceIdChange={setWorkspaceId}
                 isConnected={isConnected}
                 onConnectionChange={setIsConnected}
+                addCurlLog={addLog}
               />
               <BitriseGuide />
             </div>
@@ -66,10 +78,12 @@ const Index = () => {
           <div className="lg:col-span-8 space-y-6">
             <AppSelector
               apiToken={apiToken}
+              workspaceId={workspaceId}
               isConnected={isConnected}
               selectedAppId={selectedApp?.id || appId || null}
               lastUsedAppId={lastUsedAppId}
               onAppSelect={handleAppSelect}
+              addCurlLog={addLog}
             />
 
             <UploadZone
@@ -94,6 +108,8 @@ const Index = () => {
           Credentials are never stored • All processing happens in your browser
         </p>
       </div>
+
+      <CurlLogPanel logs={logs} onClear={clearLogs} />
     </div>
   );
 };

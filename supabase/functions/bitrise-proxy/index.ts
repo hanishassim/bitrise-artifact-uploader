@@ -3,12 +3,6 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const RM_API_HOST = 'https://api.bitrise.io';
 
-const logCurlCommand = (url: string, method: string, headers: Record<string, string>) => {
-  const headerPart = Object.entries(headers).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
-  const curlCommand = `curl -X ${method} ${headerPart} '${url}'`;
-  console.log(curlCommand);
-};
-
 Deno.serve(async (req: Request) => {
   const origin = req.headers.get('Origin');
   // Allow requests from localhost on any port
@@ -16,7 +10,7 @@ Deno.serve(async (req: Request) => {
 
   const corsHeaders = {
     'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-workspace-id',
   };
 
   // Handle CORS preflight requests
@@ -38,6 +32,16 @@ Deno.serve(async (req: Request) => {
 
     let response: Response;
     let url: string;
+    let curlCommand: string | undefined;
+
+    const generateCurlCommand = (url: string, method: string, headers: Record<string, string>, body?: string) => {
+      const headerPart = Object.entries(headers).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
+      let command = `curl -X ${method} ${headerPart} '${url}'`;
+      if (body) {
+        command += ` -d '${body.replace(/'/g, "'\\''")}'`;
+      }
+      return command;
+    };
 
     switch (action) {
       case 'listConnectedApps': {
@@ -50,7 +54,8 @@ Deno.serve(async (req: Request) => {
         }
         url = `${RM_API_HOST}/release-management/v1/connected-apps?workspace_slug=${workspaceId}&items_per_page=50&page=1`;
         const headers = { 'Authorization': apiToken };
-        logCurlCommand(url, 'GET', headers);
+        curlCommand = generateCurlCommand(url, 'GET', headers);
+        console.log(curlCommand);
         response = await fetch(url, { method: 'GET', headers });
         break;
       }
@@ -64,7 +69,8 @@ Deno.serve(async (req: Request) => {
         }
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}`;
         const headers = { 'Authorization': apiToken };
-        logCurlCommand(url, 'GET', headers);
+        curlCommand = generateCurlCommand(url, 'GET', headers);
+        console.log(curlCommand);
         response = await fetch(url, { method: 'GET', headers });
         break;
       }
@@ -84,7 +90,8 @@ Deno.serve(async (req: Request) => {
         }
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/upload-url?file_name=${encodeURIComponent(fileName)}&file_size_bytes=${fileSizeBytes}`;
         const headers = { 'Authorization': apiToken };
-        logCurlCommand(url, 'GET', headers);
+        curlCommand = generateCurlCommand(url, 'GET', headers);
+        console.log(curlCommand);
         response = await fetch(url, { method: 'GET', headers });
         break;
       }
@@ -95,7 +102,8 @@ Deno.serve(async (req: Request) => {
         }
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/status`;
         const headers = { 'Authorization': apiToken };
-        logCurlCommand(url, 'GET', headers);
+        curlCommand = generateCurlCommand(url, 'GET', headers);
+        console.log(curlCommand);
         response = await fetch(url, { method: 'GET', headers });
         break;
       }
@@ -107,7 +115,8 @@ Deno.serve(async (req: Request) => {
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/what-to-test`;
         const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
         const body = JSON.stringify({ what_to_test: whatsNew });
-        logCurlCommand(url, 'PUT', headers);
+        curlCommand = generateCurlCommand(url, 'PUT', headers, body);
+        console.log(curlCommand);
         response = await fetch(url, { method: 'PUT', headers, body });
         break;
       }
@@ -118,7 +127,8 @@ Deno.serve(async (req: Request) => {
         }
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/public-install-page`;
         const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
-        logCurlCommand(url, 'PUT', headers);
+        curlCommand = generateCurlCommand(url, 'PUT', headers);
+        console.log(curlCommand);
         response = await fetch(url, { method: 'PUT', headers });
         break;
       }
@@ -134,7 +144,7 @@ Deno.serve(async (req: Request) => {
     console.log(`Response status: ${response.status}`);
 
     return new Response(
-      JSON.stringify({ status: response.status, data }),
+      JSON.stringify({ status: response.status, data, curlCommand }),
       {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

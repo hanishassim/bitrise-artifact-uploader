@@ -104,7 +104,7 @@ async function getUploadUrl(
   artifactId: string,
   fileName: string,
   fileSizeBytes: number
-): Promise<{ success: boolean; data?: UploadUrlResponse; error?: string }> {
+): Promise<{ success: boolean; data?: UploadUrlResponse; error?: string; curlCommand?: string; logs?: string[] }> {
   try {
     const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
       body: { action: 'getUploadUrl', apiToken, appId, artifactId, fileName, fileSizeBytes }
@@ -114,10 +114,12 @@ async function getUploadUrl(
       return { success: false, error: 'Network error while getting upload URL' };
     }
 
+    const { curlCommand, logs } = data;
+
     if (data.status === 200) {
-      return { success: true, data: data.data };
+      return { success: true, data: data.data, curlCommand, logs };
     } else {
-      return { success: false, error: data.data?.message || `Failed to get upload URL` };
+      return { success: false, error: data.data?.message || `Failed to get upload URL`, curlCommand, logs };
     }
   } catch (error) {
     return { success: false, error: 'Network error while getting upload URL' };
@@ -129,7 +131,7 @@ async function checkArtifactStatus(
   appId: string,
   artifactId: string,
   retryCount = 0
-): Promise<{ success: boolean; data?: ArtifactStatus; error?: string }> {
+): Promise<{ success: boolean; data?: ArtifactStatus; error?: string; curlCommand?: string; logs?: string[] }> {
   if (retryCount >= 10) {
     return { success: false, error: 'Artifact processing timed out after 10 retries' };
   }
@@ -143,30 +145,34 @@ async function checkArtifactStatus(
       return { success: false, error: 'Network error while checking status' };
     }
 
+    const { curlCommand, logs } = data;
+
     if (data.status !== 200) {
-      return { success: false, error: `Failed to check status` };
+      return { success: false, error: `Failed to check status`, curlCommand, logs };
     }
 
     const status = data.data.status;
     const artifact = data.data;
 
     if (status === 'processed_valid') {
-      return { 
-        success: true, 
+      return {
+        success: true,
         data: {
           status: artifact.status,
           installable_artifact_url: artifact.installable_artifact_url,
           public_install_page_url: artifact.public_install_page_url,
-        }
+        },
+        curlCommand,
+        logs,
       };
     } else if (status === 'processed_invalid') {
-      return { success: false, error: 'Artifact was processed but is invalid' };
+      return { success: false, error: 'Artifact was processed but is invalid', curlCommand, logs };
     } else if (status === 'uploaded' || status === 'upload_requested') {
       // Wait and retry
       await new Promise(resolve => setTimeout(resolve, 2000));
       return checkArtifactStatus(apiToken, appId, artifactId, retryCount + 1);
     } else {
-      return { success: false, error: `Unexpected status: ${status}` };
+      return { success: false, error: `Unexpected status: ${status}`, curlCommand, logs };
     }
   } catch (error) {
     return { success: false, error: 'Network error while checking status' };
@@ -178,18 +184,19 @@ export async function submitWhatsNew(
   appId: string,
   artifactId: string,
   whatsNewText: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; curlCommand?: string; logs?: string[] }> {
   try {
     const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
       body: { action: 'submitWhatsNew', apiToken, appId, artifactId, whatsNew: whatsNewText }
     });
     if (error) return { success: false, error: 'Network error' };
-    if (data.status === 200) return { success: true };
-    if (data.status === 400) return { success: false, error: 'Invalid request parameters' };
-    if (data.status === 401) return { success: false, error: 'Invalid or expired API token' };
-    if (data.status === 404) return { success: false, error: 'Artifact not found' };
-    if (data.status === 500) return { success: false, error: 'Bitrise server error' };
-    return { success: false, error: `Unexpected error (${data.status})` };
+    const { curlCommand, logs } = data;
+    if (data.status === 200) return { success: true, curlCommand, logs };
+    if (data.status === 400) return { success: false, error: 'Invalid request parameters', curlCommand, logs };
+    if (data.status === 401) return { success: false, error: 'Invalid or expired API token', curlCommand, logs };
+    if (data.status === 404) return { success: false, error: 'Artifact not found', curlCommand, logs };
+    if (data.status === 500) return { success: false, error: 'Bitrise server error', curlCommand, logs };
+    return { success: false, error: `Unexpected error (${data.status})`, curlCommand, logs };
   } catch (error) {
     return { success: false, error: 'Network error' };
   }
@@ -199,19 +206,20 @@ export async function enablePublicInstallPage(
   apiToken: string,
   appId: string,
   artifactId: string
-): Promise<{ success: boolean; data?: ArtifactStatus, error?: string }> {
+): Promise<{ success: boolean; data?: ArtifactStatus, error?: string; curlCommand?: string; logs?: string[] }> {
   try {
     const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
       body: { action: 'enablePublicPage', apiToken, appId, artifactId }
     });
 
     if (error) return { success: false, error: 'Network error' };
+    const { curlCommand, logs } = data;
     if (data.status !== 200) {
-      if (data.status === 400) return { success: false, error: 'Invalid request parameters' };
-      if (data.status === 401) return { success: false, error: 'Invalid or expired API token' };
-      if (data.status === 404) return { success: false, error: 'Artifact not found' };
-      if (data.status === 500) return { success: false, error: 'Bitrise server error' };
-      return { success: false, error: `Unexpected error (${data.status})` };
+      if (data.status === 400) return { success: false, error: 'Invalid request parameters', curlCommand, logs };
+      if (data.status === 401) return { success: false, error: 'Invalid or expired API token', curlCommand, logs };
+      if (data.status === 404) return { success: false, error: 'Artifact not found', curlCommand, logs };
+      if (data.status === 500) return { success: false, error: 'Bitrise server error', curlCommand, logs };
+      return { success: false, error: `Unexpected error (${data.status})`, curlCommand, logs };
     }
 
     const artifact = data.data;
@@ -222,7 +230,9 @@ export async function enablePublicInstallPage(
         status: artifact.status,
         installable_artifact_url: artifact.installable_artifact_url,
         public_install_page_url: artifact.public_install_page_url,
-      }
+      },
+      curlCommand,
+      logs
     };
   } catch (error) {
     return { success: false, error: 'Network error' };
@@ -235,7 +245,8 @@ export function uploadArtifact(
   apiToken: string,
   appId: string,
   onProgress: (progress: UploadProgress) => void,
-  abortController: AbortController
+  abortController: AbortController,
+  addApiLog: (log: { curlCommand?: string; logs?: string[] }) => void
 ): Promise<UploadResult> {
   return new Promise((resolve, reject) => {
     const artifactId = generateUUID();
@@ -243,6 +254,7 @@ export function uploadArtifact(
     const upload = async () => {
       // Step 1: Get upload URL from Bitrise API
       const uploadUrlResult = await getUploadUrl(apiToken, appId, artifactId, file.name, file.size);
+      addApiLog({ curlCommand: uploadUrlResult.curlCommand, logs: uploadUrlResult.logs });
 
       if (!uploadUrlResult.success || !uploadUrlResult.data) {
         resolve({
@@ -331,9 +343,16 @@ export function uploadArtifact(
     xhr.open(uploadInfo.method, uploadInfo.url);
     
     // Set headers from Bitrise API response
+    const headers: Record<string, string> = {};
     Object.values(uploadInfo.headers).forEach((header) => {
       xhr.setRequestHeader(header.name, header.value);
+      headers[header.name] = header.value;
     });
+
+    // Generate and log cURL command for the upload
+    const headerPart = Object.entries(headers).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
+    const curlCommand = `curl -X ${uploadInfo.method} ${headerPart} --data-binary '@${file.name}' '${uploadInfo.url}'`;
+    addApiLog({ curlCommand, logs: [`[File Upload] cURL command generated for ${file.name}`] });
 
     xhr.send(file);
     }

@@ -20,11 +20,12 @@ interface UploadZoneProps {
   lastArtifact: LastArtifactInfo | null;
   onFileSave: (file: File) => void;
   onClearLastArtifact: () => void;
+  addApiLog: (log: { curlCommand?: string; logs?: string[] }) => void;
 }
 
 type UploadState = 'idle' | 'hashing' | 'uploading' | 'success' | 'error';
 
-export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, lastArtifact, onFileSave, onClearLastArtifact }: UploadZoneProps) {
+export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, lastArtifact, onFileSave, onClearLastArtifact, addApiLog }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileHash, setFileHash] = useState<string>('');
@@ -99,7 +100,8 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
         apiToken,
         appId,
         setProgress,
-        controller
+        controller,
+        addApiLog
       );
 
       if (result.success && result.artifactId) {
@@ -107,11 +109,13 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
 
         // Submit "What's New" if text is provided
         if (whatsNew.trim()) {
-          await submitWhatsNew(apiToken, appId, result.artifactId, whatsNew.trim());
+          const whatsNewResult = await submitWhatsNew(apiToken, appId, result.artifactId, whatsNew.trim());
+          addApiLog({ curlCommand: whatsNewResult.curlCommand, logs: whatsNewResult.logs });
         }
 
         // Enable public install page and get the updated artifact status
         const publicPageResult = await enablePublicInstallPage(apiToken, appId, result.artifactId);
+        addApiLog({ curlCommand: publicPageResult.curlCommand, logs: publicPageResult.logs });
 
         if (publicPageResult.success) {
           setArtifactStatus(publicPageResult.data || null);

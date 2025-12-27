@@ -94,6 +94,7 @@ const Index = () => {
               lastArtifact={lastArtifact}
               onFileSave={saveLastArtifact}
               onClearLastArtifact={clearLastArtifact}
+              addApiLog={addLog}
             />
 
             <UploadHistory

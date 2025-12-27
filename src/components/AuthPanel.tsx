@@ -55,15 +55,6 @@ export function AuthPanel({
     setTesting(false);
   }, [apiToken, workspaceId, addApiLog, onConnectionChange]);
 
-  useEffect(() => {
-    if (apiToken.trim() && workspaceId.trim() && !isConnected && !testing) {
-      const timer = setTimeout(() => {
-        handleTestConnection();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [apiToken, workspaceId, isConnected, testing, handleTestConnection]);
-
   return (
     <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
       <CardHeader className="pb-4">

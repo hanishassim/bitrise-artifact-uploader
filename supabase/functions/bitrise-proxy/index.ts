@@ -84,9 +84,80 @@ Deno.serve(async (req: Request) => {
         logs.push(`Bitrise API response status: ${response.status}`);
         break;
       }
+      case 'getUploadUrl': {
+        logs.push('Action: getUploadUrl');
+        if (!appId || !fileName || !fileSizeBytes) {
+          logs.push('Error: Missing required parameters for getUploadUrl');
+          return new Response(
+            JSON.stringify({ error: 'Missing appId, fileName, or fileSizeBytes', logs }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/upload-url`;
+        const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
+        const payload = JSON.stringify({ file_name: fileName, file_size_bytes: fileSizeBytes });
+        curlCommand = generateCurlCommand(url, 'POST', headers, payload);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'POST', headers, body: payload });
+        logs.push(`Bitrise API response status: ${response.status}`);
+        break;
+      }
 
-      // ... other cases remain the same, but we add logging
+      case 'checkStatus': {
+        logs.push('Action: checkStatus');
+        if (!appId || !artifactId) {
+          logs.push('Error: Missing appId or artifactId');
+          return new Response(
+            JSON.stringify({ error: 'Missing appId or artifactId', logs }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/artifacts/${artifactId}`;
+        const headers = { 'Authorization': apiToken };
+        curlCommand = generateCurlCommand(url, 'GET', headers);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'GET', headers });
+        logs.push(`Bitrise API response status: ${response.status}`);
+        break;
+      }
 
+      case 'submitWhatsNew': {
+        logs.push('Action: submitWhatsNew');
+        if (!appId || !artifactId || !whatsNew) {
+          logs.push('Error: Missing required parameters for submitWhatsNew');
+          return new Response(
+            JSON.stringify({ error: 'Missing appId, artifactId, or whatsNew', logs }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/artifacts/${artifactId}/whats-new`;
+        const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
+        const payload = JSON.stringify({ whats_new_text: whatsNew });
+        curlCommand = generateCurlCommand(url, 'POST', headers, payload);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'POST', headers, body: payload });
+        logs.push(`Bitrise API response status: ${response.status}`);
+        break;
+      }
+
+      case 'enablePublicPage': {
+        logs.push('Action: enablePublicPage');
+        if (!appId || !artifactId) {
+          logs.push('Error: Missing appId or artifactId');
+          return new Response(
+            JSON.stringify({ error: 'Missing appId or artifactId', logs }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/artifacts/${artifactId}/public-page`;
+        const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
+        const payload = JSON.stringify({ public_install_page_enabled: true });
+        curlCommand = generateCurlCommand(url, 'POST', headers, payload);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'POST', headers, body: payload });
+        logs.push(`Bitrise API response status: ${response.status}`);
+        break;
+      }
       default:
         logs.push(`Error: Invalid action - ${action}`);
         return new Response(

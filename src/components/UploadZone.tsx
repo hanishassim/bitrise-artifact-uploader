@@ -1,11 +1,13 @@
 import { useState, useRef, useCallback } from 'react';
+import QRCode from 'qrcode.react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Textarea } from '@/components/ui/textarea';
 import { Upload, FileUp, X, CheckCircle, XCircle, Loader2, Shield, RotateCcw, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { calculateSHA256, formatFileSize, isValidArtifactFile, getFileExtension } from '@/lib/fileHash';
-import { uploadArtifact, UploadProgress, ArtifactStatus } from '@/lib/bitriseApi';
+import { uploadArtifact, submitWhatsNew, enablePublicInstallPage, UploadProgress, ArtifactStatus } from '@/lib/bitriseApi';
 import { UploadRecord } from '@/hooks/useUploadHistory';
 import { LastArtifactInfo } from '@/hooks/useLastArtifact';
 import { toast } from '@/hooks/use-toast';
@@ -26,6 +28,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileHash, setFileHash] = useState<string>('');
+  const [whatsNew, setWhatsNew] = useState('');
   const [uploadState, setUploadState] = useState<UploadState>('idle');
   const [progress, setProgress] = useState<UploadProgress | null>(null);
   const [errorMessage, setErrorMessage] = useState<string>('');
@@ -99,9 +102,24 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
         controller
       );
 
-      if (result.success) {
+      if (result.success && result.artifactId) {
         setUploadState('success');
-        setArtifactStatus(result.artifactStatus || null);
+
+        // Submit "What's New" if text is provided
+        if (whatsNew.trim()) {
+          await submitWhatsNew(apiToken, appId, result.artifactId, whatsNew.trim());
+        }
+
+        // Enable public install page and get the updated artifact status
+        const publicPageResult = await enablePublicInstallPage(apiToken, appId, result.artifactId);
+
+        if (publicPageResult.success) {
+          setArtifactStatus(publicPageResult.data || null);
+        } else {
+          // Handle case where enabling public page fails but upload was successful
+          setArtifactStatus(result.artifactStatus || null);
+        }
+
         onUploadComplete({
           fileName: selectedFile.name,
           fileType: getFileExtension(selectedFile.name) as 'ipa' | 'apk' | 'aab',
@@ -141,6 +159,7 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
   const handleReset = () => {
     setSelectedFile(null);
     setFileHash('');
+    setWhatsNew('');
     setUploadState('idle');
     setProgress(null);
     setErrorMessage('');
@@ -274,6 +293,19 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
               </div>
             )}
 
+            {/* What's New Input */}
+            {fileHash && uploadState === 'idle' && (
+            <div className="space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">What's new? (Optional)</p>
+                <Textarea
+                  value={whatsNew}
+                  onChange={(e) => setWhatsNew(e.target.value)}
+                  placeholder="Enter release notes for this artifact..."
+                  className="bg-muted/30"
+                />
+              </div>
+            )}
+
             {fileHash && uploadState !== 'hashing' && (
               <div className="flex items-start gap-2 rounded-lg bg-muted/30 p-3">
                 <Shield className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
@@ -308,26 +340,25 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
                 </div>
                 
                 {artifactStatus?.public_install_page_url && (
-                  <div className="rounded-lg border border-border/50 bg-muted/30 p-4">
-                    <p className="mb-2 text-sm font-medium text-muted-foreground">Copy and share the link</p>
-                    <div className="flex items-center gap-2">
-                      <div className="min-w-0 flex-1 rounded-lg border border-border/50 bg-background px-3 py-2">
-                        <p className="truncate text-sm text-primary break-all">
-                          {artifactStatus.public_install_page_url}
-                        </p>
+                  <div className="space-y-4 rounded-lg border border-border/50 bg-muted/30 p-4">
+                    <div>
+                      <p className="mb-2 text-sm font-medium text-muted-foreground">Copy and share the link</p>
+                      <div className="flex items-center gap-2">
+                        <div className="min-w-0 flex-1 rounded-lg border border-border/50 bg-background px-3 py-2">
+                          <p className="truncate text-sm text-primary break-all">
+                            {artifactStatus.public_install_page_url}
+                          </p>
+                        </div>
+                        <Button variant="outline" size="icon" onClick={handleCopyLink} className="flex-shrink-0">
+                          {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                        </Button>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={handleCopyLink}
-                        className="flex-shrink-0"
-                      >
-                        {copied ? (
-                          <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </Button>
+                    </div>
+                    <div className="text-center">
+                      <p className="mb-2 text-sm font-medium text-muted-foreground">Scan this QR code on your device</p>
+                      <div className="inline-block rounded-lg bg-white p-2">
+                        <QRCode value={artifactStatus.public_install_page_url} size={128} />
+                      </div>
                     </div>
                   </div>
                 )}

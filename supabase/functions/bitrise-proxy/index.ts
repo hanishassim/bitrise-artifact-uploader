@@ -1,5 +1,5 @@
-/// <reference path="../deno.d.ts" />
 // Supabase Edge Function: bitrise-proxy
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const RM_API_HOST = 'https://api.bitrise.io';
 
@@ -25,7 +25,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes } = await req.json();
+    const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes, whatsNew } = await req.json();
 
     console.log(`Bitrise proxy action: ${action}`);
 
@@ -90,22 +90,36 @@ Deno.serve(async (req: Request) => {
       }
 
       case 'checkStatus': {
-        if (!appId) {
-          return new Response(
-            JSON.stringify({ error: 'Missing appId' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        if (!artifactId) {
-          return new Response(
-            JSON.stringify({ error: 'Missing artifactId' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
+        if (!appId || !artifactId) {
+          return new Response(JSON.stringify({ error: 'Missing appId or artifactId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
         }
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/status`;
         const headers = { 'Authorization': apiToken };
         logCurlCommand(url, 'GET', headers);
         response = await fetch(url, { method: 'GET', headers });
+        break;
+      }
+
+      case 'submitWhatsNew': {
+        if (!appId || !artifactId || !whatsNew) {
+          return new Response(JSON.stringify({ error: 'Missing appId, artifactId, or whatsNew' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/what-to-test`;
+        const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
+        const body = JSON.stringify({ what_to_test: whatsNew });
+        logCurlCommand(url, 'PUT', headers);
+        response = await fetch(url, { method: 'PUT', headers, body });
+        break;
+      }
+
+      case 'enablePublicPage': {
+        if (!appId || !artifactId) {
+          return new Response(JSON.stringify({ error: 'Missing appId or artifactId' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/public-install-page`;
+        const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
+        logCurlCommand(url, 'PUT', headers);
+        response = await fetch(url, { method: 'PUT', headers });
         break;
       }
 

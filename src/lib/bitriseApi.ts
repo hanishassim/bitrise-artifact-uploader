@@ -153,14 +153,15 @@ async function checkArtifactStatus(
     }
 
     const status = data.data.status;
+    const artifact = data.data;
 
     if (status === 'processed_valid') {
       return { 
         success: true, 
         data: {
-          status: data.data.status,
-          installable_artifact_url: data.data.installable_artifact_url,
-          public_install_page_url: data.data.public_install_page_url,
+          status: artifact.status,
+          installable_artifact_url: artifact.installable_artifact_url,
+          public_install_page_url: artifact.public_install_page_url,
         }
       };
     } else if (status === 'processed_invalid') {
@@ -177,6 +178,63 @@ async function checkArtifactStatus(
   }
 }
 
+export async function submitWhatsNew(
+  apiToken: string,
+  appId: string,
+  artifactId: string,
+  whatsNewText: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
+      body: { action: 'submitWhatsNew', apiToken, appId, artifactId, whatsNew: whatsNewText }
+    });
+    if (error) return { success: false, error: 'Network error' };
+    if (data.status === 200) return { success: true };
+    if (data.status === 400) return { success: false, error: 'Invalid request parameters' };
+    if (data.status === 401) return { success: false, error: 'Invalid or expired API token' };
+    if (data.status === 404) return { success: false, error: 'Artifact not found' };
+    if (data.status === 500) return { success: false, error: 'Bitrise server error' };
+    return { success: false, error: `Unexpected error (${data.status})` };
+  } catch (error) {
+    return { success: false, error: 'Network error' };
+  }
+}
+
+export async function enablePublicInstallPage(
+  apiToken: string,
+  appId: string,
+  artifactId: string
+): Promise<{ success: boolean; data?: ArtifactStatus, error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
+      body: { action: 'enablePublicPage', apiToken, appId, artifactId }
+    });
+
+    if (error) return { success: false, error: 'Network error' };
+    if (data.status !== 200) {
+      if (data.status === 400) return { success: false, error: 'Invalid request parameters' };
+      if (data.status === 401) return { success: false, error: 'Invalid or expired API token' };
+      if (data.status === 404) return { success: false, error: 'Artifact not found' };
+      if (data.status === 500) return { success: false, error: 'Bitrise server error' };
+      return { success: false, error: `Unexpected error (${data.status})` };
+    }
+
+    const artifact = data.data;
+
+    return {
+      success: true,
+      data: {
+        status: artifact.status,
+        installable_artifact_url: artifact.installable_artifact_url,
+        public_install_page_url: artifact.public_install_page_url,
+      }
+    };
+  } catch (error) {
+    return { success: false, error: 'Network error' };
+  }
+}
+
+
 export function uploadArtifact(
   file: File,
   apiToken: string,
@@ -184,23 +242,24 @@ export function uploadArtifact(
   onProgress: (progress: UploadProgress) => void,
   abortController: AbortController
 ): Promise<UploadResult> {
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const artifactId = generateUUID();
-    
-    // Step 1: Get upload URL from Bitrise API
-    const uploadUrlResult = await getUploadUrl(apiToken, appId, artifactId, file.name, file.size);
-    
-    if (!uploadUrlResult.success || !uploadUrlResult.data) {
-      resolve({
-        success: false,
-        message: uploadUrlResult.error || 'Failed to get upload URL',
-      });
-      return;
-    }
 
-    const uploadInfo = uploadUrlResult.data;
-    
-    // Step 2: Upload to Google Cloud Storage using the provided URL and headers
+    const upload = async () => {
+      // Step 1: Get upload URL from Bitrise API
+      const uploadUrlResult = await getUploadUrl(apiToken, appId, artifactId, file.name, file.size);
+
+      if (!uploadUrlResult.success || !uploadUrlResult.data) {
+        resolve({
+          success: false,
+          message: uploadUrlResult.error || 'Failed to get upload URL',
+        });
+        return;
+      }
+
+      const uploadInfo = uploadUrlResult.data;
+
+      // Step 2: Upload to Google Cloud Storage using the provided URL and headers
     const xhr = new XMLHttpRequest();
     const startTime = Date.now();
     let lastLoaded = 0;
@@ -229,30 +288,33 @@ export function uploadArtifact(
       }
     });
 
-    xhr.addEventListener('load', async () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        // Step 3: Check artifact processing status
-        const statusResult = await checkArtifactStatus(apiToken, appId, artifactId);
-        
-        if (statusResult.success) {
-          resolve({
-            success: true,
-            message: 'Upload successful!',
-            artifactId,
-            artifactStatus: statusResult.data,
-          });
+    xhr.addEventListener('load', () => {
+      const processArtifact = async () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          // Step 3: Check artifact processing status
+          const statusResult = await checkArtifactStatus(apiToken, appId, artifactId);
+
+          if (statusResult.success) {
+            resolve({
+              success: true,
+              message: 'Upload successful!',
+              artifactId,
+              artifactStatus: statusResult.data,
+            });
+          } else {
+            resolve({
+              success: false,
+              message: statusResult.error || 'Artifact processing failed',
+            });
+          }
         } else {
           resolve({
             success: false,
-            message: statusResult.error || 'Artifact processing failed',
+            message: `Upload failed: ${xhr.statusText}`,
           });
         }
-      } else {
-        resolve({
-          success: false,
-          message: `Upload failed: ${xhr.statusText}`,
-        });
-      }
+      };
+      processArtifact();
     });
 
     xhr.addEventListener('error', () => {
@@ -279,5 +341,7 @@ export function uploadArtifact(
     });
 
     xhr.send(file);
+    }
+    upload();
   });
 }

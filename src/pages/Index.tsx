@@ -4,12 +4,12 @@ import { BitriseGuide } from '@/components/BitriseGuide';
 import { AppSelector } from '@/components/AppSelector';
 import { UploadZone } from '@/components/UploadZone';
 import { UploadHistory } from '@/components/UploadHistory';
-import { CurlLogPanel } from '@/components/CurlLogPanel';
+import { ApiLogPanel } from '@/components/ApiLogPanel';
 import { useUploadHistory } from '@/hooks/useUploadHistory';
 import { usePersistedCredentials } from '@/hooks/usePersistedCredentials';
 import { useLastArtifact } from '@/hooks/useLastArtifact';
 import { useLastUsedApp } from '@/hooks/useLastUsedApp';
-import { useCurlLogs } from '@/hooks/useCurlLogs';
+import { useApiLogs } from '@/hooks/useApiLogs';
 import { ConnectedApp } from '@/lib/bitriseApi';
 import { Rocket } from 'lucide-react';
 
@@ -28,7 +28,7 @@ const Index = () => {
   const [isConnected, setIsConnected] = useState(false);
   const [selectedApp, setSelectedApp] = useState<ConnectedApp | null>(null);
   const { history, addRecord, clearHistory } = useUploadHistory();
-  const { logs, addLog, clearLogs } = useCurlLogs();
+  const { logs, addLog, clearLogs } = useApiLogs();
 
   const handleAppSelect = (app: ConnectedApp) => {
     setSelectedApp(app);
@@ -68,7 +68,7 @@ const Index = () => {
                 onWorkspaceIdChange={setWorkspaceId}
                 isConnected={isConnected}
                 onConnectionChange={setIsConnected}
-                addCurlLog={addLog}
+                addApiLog={addLog}
               />
               <BitriseGuide />
             </div>
@@ -83,7 +83,7 @@ const Index = () => {
               selectedAppId={selectedApp?.id || appId || null}
               lastUsedAppId={lastUsedAppId}
               onAppSelect={handleAppSelect}
-              addCurlLog={addLog}
+              addApiLog={addLog}
             />
 
             <UploadZone
@@ -109,7 +109,7 @@ const Index = () => {
         </p>
       </div>
 
-      <CurlLogPanel logs={logs} onClear={clearLogs} />
+      <ApiLogPanel logs={logs} onClear={clearLogs} />
     </div>
   );
 };

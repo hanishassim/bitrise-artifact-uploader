@@ -14,7 +14,7 @@ interface AppSelectorProps {
   selectedAppId: string | null;
   lastUsedAppId: string | null;
   onAppSelect: (app: ConnectedApp) => void;
-  addCurlLog: (command: string) => void;
+  addApiLog: (log: { curlCommand?: string; logs?: string[] }) => void;
 }
 
 export function AppSelector({
@@ -24,7 +24,7 @@ export function AppSelector({
   selectedAppId,
   lastUsedAppId,
   onAppSelect,
-  addCurlLog,
+  addApiLog,
 }: AppSelectorProps) {
   const [apps, setApps] = useState<ConnectedApp[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -40,9 +40,10 @@ export function AppSelector({
 
     const result = await listConnectedApps(apiToken, workspaceId);
 
-    if (result.curlCommand) {
-      addCurlLog(result.curlCommand);
-    }
+    addApiLog({
+      curlCommand: result.curlCommand,
+      logs: result.logs,
+    });
 
     if (result.success && result.data) {
       setApps(result.data);
@@ -51,7 +52,7 @@ export function AppSelector({
     }
 
     setIsLoading(false);
-  }, [isConnected, apiToken, workspaceId, addCurlLog]);
+  }, [isConnected, apiToken, workspaceId, addApiLog]);
 
   useEffect(() => {
     fetchApps();

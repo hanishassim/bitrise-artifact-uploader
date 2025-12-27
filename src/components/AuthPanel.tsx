@@ -13,7 +13,7 @@ interface AuthPanelProps {
   onWorkspaceIdChange: (value: string) => void;
   isConnected: boolean;
   onConnectionChange: (connected: boolean) => void;
-  addCurlLog: (command: string) => void;
+  addApiLog: (log: { curlCommand?: string; logs?: string[] }) => void;
 }
 
 export function AuthPanel({
@@ -23,7 +23,7 @@ export function AuthPanel({
   onWorkspaceIdChange,
   isConnected,
   onConnectionChange,
-  addCurlLog,
+  addApiLog,
 }: AuthPanelProps) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -39,9 +39,10 @@ export function AuthPanel({
 
     const result = await testConnection(apiToken, workspaceId);
 
-    if (result.curlCommand) {
-      addCurlLog(result.curlCommand);
-    }
+    addApiLog({
+      curlCommand: result.curlCommand,
+      logs: result.logs,
+    });
 
     if (result.success) {
       setTestResult({ success: true, message: 'Connected successfully!' });
@@ -52,7 +53,7 @@ export function AuthPanel({
     }
 
     setTesting(false);
-  }, [apiToken, workspaceId, addCurlLog, onConnectionChange]);
+  }, [apiToken, workspaceId, addApiLog, onConnectionChange]);
 
   useEffect(() => {
     if (apiToken.trim() && workspaceId.trim() && !isConnected && !testing) {

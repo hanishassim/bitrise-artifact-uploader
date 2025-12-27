@@ -38,9 +38,9 @@ function generateUUID(): string {
 }
 
 export async function listConnectedApps(
-  apiToken: string, 
+  apiToken: string,
   workspaceId: string
-): Promise<{ success: boolean; data?: ConnectedApp[]; error?: string, curlCommand?: string }> {
+): Promise<{ success: boolean; data?: ConnectedApp[]; error?: string; curlCommand?: string; logs?: string[] }> {
   try {
     const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
       body: { action: 'listConnectedApps', apiToken, workspaceId }
@@ -50,25 +50,16 @@ export async function listConnectedApps(
       return { success: false, error: 'Network error. Please check your connection.' };
     }
 
-    const status = data.status;
-    const curlCommand = data.curlCommand;
+    const { status, curlCommand, logs } = data;
 
     if (status === 200) {
       const apps: ConnectedApp[] = data.data.data || [];
-      return { success: true, data: apps, curlCommand };
-    } else if (status === 400) {
-      return { success: false, error: 'Invalid request parameters', curlCommand };
-    } else if (status === 401) {
-      return { success: false, error: 'Invalid or expired API token', curlCommand };
-    } else if (status === 403) {
-      return { success: false, error: 'Access forbidden. Check your workspace permissions.', curlCommand };
-    } else if (status === 404) {
-      return { success: false, error: 'Workspace not found', curlCommand };
-    } else if (status === 500) {
-      return { success: false, error: 'Bitrise server error. Please try again later.', curlCommand };
-    } else {
-      return { success: false, error: `Unexpected error (${status})`, curlCommand };
+      return { success: true, data: apps, curlCommand, logs };
     }
+
+    const errorMessage = data.error || data.data?.error || 'An unknown error occurred';
+    return { success: false, error: errorMessage, curlCommand, logs };
+
   } catch (error) {
     return { success: false, error: 'Network error. Please check your connection.' };
   }
@@ -77,7 +68,7 @@ export async function listConnectedApps(
 export async function testConnection(
   apiToken: string,
   workspaceId: string
-): Promise<{ success: boolean; message: string; curlCommand?: string }> {
+): Promise<{ success: boolean; message: string; curlCommand?: string; logs?: string[] }> {
   try {
     const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
       body: { action: 'listConnectedApps', apiToken, workspaceId }
@@ -87,17 +78,15 @@ export async function testConnection(
       return { success: false, message: 'Network error. Please check your connection.' };
     }
 
-    const curlCommand = data.curlCommand;
+    const { status, curlCommand, logs } = data;
 
-    if (data.status === 200) {
-      return { success: true, message: 'Connection successful!', curlCommand };
-    } else if (data.status === 401) {
-      return { success: false, message: 'Invalid API token', curlCommand };
-    } else if (data.status === 404) {
-      return { success: false, message: 'Workspace not found', curlCommand };
-    } else {
-      return { success: false, message: data.data?.error || 'Connection failed', curlCommand };
+    if (status === 200) {
+      return { success: true, message: 'Connection successful!', curlCommand, logs };
     }
+
+    const errorMessage = data.error || data.data?.error || 'Connection failed';
+    return { success: false, message: errorMessage, curlCommand, logs };
+
   } catch (error) {
     return { success: false, message: 'Network error. Please check your connection.' };
   }

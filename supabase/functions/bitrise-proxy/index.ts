@@ -1,4 +1,5 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+/// <reference path="../deno.d.ts" />
+// Supabase Edge Function: bitrise-proxy
 
 const RM_API_HOST = 'https://api.bitrise.io';
 
@@ -8,7 +9,7 @@ const logCurlCommand = (url: string, method: string, headers: Record<string, str
   console.log(curlCommand);
 };
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
   const origin = req.headers.get('Origin');
   // Allow requests from localhost on any port
   const isAllowedOrigin = origin && /^http:\/\/localhost:\d+$/.test(origin);
@@ -40,6 +41,7 @@ serve(async (req) => {
 
     switch (action) {
       case 'listConnectedApps': {
+        console.log('listConnectedApps');
         if (!workspaceId) {
           return new Response(
             JSON.stringify({ error: 'Missing workspaceId' }),
@@ -119,9 +121,9 @@ serve(async (req) => {
 
     return new Response(
       JSON.stringify({ status: response.status, data }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 
@@ -131,7 +133,7 @@ serve(async (req) => {
       action: req.method,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-    
+
     // Return generic error to client
     return new Response(
       JSON.stringify({ error: 'Request processing failed' }),

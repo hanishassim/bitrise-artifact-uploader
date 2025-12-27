@@ -48,7 +48,7 @@ export function AuthPanel({
 
     // Test by listing connected apps for the workspace
     const result = await listConnectedApps(apiToken, WORKSPACE_ID);
-    
+
     if (result.success) {
       setTestResult({ success: true, message: 'Connected successfully!' });
       onConnectionChange(true);
@@ -56,7 +56,7 @@ export function AuthPanel({
       setTestResult({ success: false, message: result.error || 'Connection failed' });
       onConnectionChange(false);
     }
-    
+
     setTesting(false);
   };
 

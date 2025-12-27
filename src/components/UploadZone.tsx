@@ -227,20 +227,29 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
 
             {/* Last used artifact prompt */}
             {lastArtifact && isConnected && (
-              <div className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-3">
-                <RotateCcw className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm text-muted-foreground">Last used:</p>
-                  <p className="text-sm font-medium text-foreground truncate">{lastArtifact.name}</p>
-                  <p className="text-xs text-muted-foreground">{formatFileSize(lastArtifact.size)}</p>
+              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <RotateCcw className="h-4 w-4 text-primary flex-shrink-0" />
+                  <p className="text-sm font-medium text-foreground">Previously used artifact</p>
                 </div>
+                <div className="flex items-center gap-3 rounded-lg bg-background/50 p-3 mb-3">
+                  <FileUp className="h-5 w-5 text-primary flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">{lastArtifact.name}</p>
+                    <p className="text-xs text-muted-foreground">{formatFileSize(lastArtifact.size)}</p>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">
+                  For security, browsers cannot auto-load files. Please re-select the same file from your device.
+                </p>
                 <Button
-                  variant="outline"
+                  variant="default"
                   size="sm"
                   onClick={() => fileInputRef.current?.click()}
-                  className="flex-shrink-0"
+                  className="w-full"
                 >
-                  Re-select File
+                  <FileUp className="mr-2 h-4 w-4" />
+                  Select "{lastArtifact.name}"
                 </Button>
               </div>
             )}

@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { AuthPanel } from '@/components/AuthPanel';
+import { BitriseGuide } from '@/components/BitriseGuide';
 import { UploadZone } from '@/components/UploadZone';
 import { UploadHistory } from '@/components/UploadHistory';
 import { useUploadHistory } from '@/hooks/useUploadHistory';
 import { usePersistedCredentials } from '@/hooks/usePersistedCredentials';
 import { useLastArtifact } from '@/hooks/useLastArtifact';
 import { Rocket } from 'lucide-react';
-
 const Index = () => {
   const { apiToken, appId, isLoaded, setApiToken, setAppId } = usePersistedCredentials();
   const { lastArtifact, saveLastArtifact, clearLastArtifact } = useLastArtifact();
@@ -37,7 +37,7 @@ const Index = () => {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Left Column - Authentication */}
           <div className="lg:col-span-4">
-            <div className="lg:sticky lg:top-8">
+            <div className="lg:sticky lg:top-8 space-y-6">
               <AuthPanel
                 apiToken={apiToken}
                 appId={appId}
@@ -46,6 +46,7 @@ const Index = () => {
                 isConnected={isConnected}
                 onConnectionChange={setIsConnected}
               />
+              <BitriseGuide />
             </div>
           </div>
 

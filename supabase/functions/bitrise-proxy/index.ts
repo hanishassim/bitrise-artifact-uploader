@@ -2,6 +2,12 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const RM_API_HOST = 'https://api.bitrise.io';
 
+const logCurlCommand = (url: string, method: string, headers: Record<string, string>) => {
+  const headerPart = Object.entries(headers).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
+  const curlCommand = `curl -X ${method} ${headerPart} '${url}'`;
+  console.log(curlCommand);
+};
+
 serve(async (req) => {
   const origin = req.headers.get('Origin');
   // Allow requests from localhost on any port
@@ -33,22 +39,21 @@ serve(async (req) => {
     let url: string;
 
     switch (action) {
-      case 'listConnectedApps':
+      case 'listConnectedApps': {
         if (!workspaceId) {
           return new Response(
             JSON.stringify({ error: 'Missing workspaceId' }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        url = `${RM_API_HOST}/release-management/v1/workspaces/${workspaceId}/connected-apps?items_per_page=50`;
-        console.log(`Listing connected apps from: ${url}`);
-        response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Authorization': apiToken },
-        });
+        url = `${RM_API_HOST}/release-management/v1/connected-apps?workspace_slug=${workspaceId}&items_per_page=50&page=1`;
+        const headers = { 'Authorization': apiToken };
+        logCurlCommand(url, 'GET', headers);
+        response = await fetch(url, { method: 'GET', headers });
         break;
+      }
 
-      case 'testConnection':
+      case 'testConnection': {
         if (!appId) {
           return new Response(
             JSON.stringify({ error: 'Missing appId' }),
@@ -56,14 +61,13 @@ serve(async (req) => {
           );
         }
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}`;
-        console.log(`Testing connection to: ${url}`);
-        response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Authorization': apiToken },
-        });
+        const headers = { 'Authorization': apiToken };
+        logCurlCommand(url, 'GET', headers);
+        response = await fetch(url, { method: 'GET', headers });
         break;
+      }
 
-      case 'getUploadUrl':
+      case 'getUploadUrl': {
         if (!appId) {
           return new Response(
             JSON.stringify({ error: 'Missing appId' }),
@@ -77,14 +81,13 @@ serve(async (req) => {
           );
         }
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/upload-url?file_name=${encodeURIComponent(fileName)}&file_size_bytes=${fileSizeBytes}`;
-        console.log(`Getting upload URL from: ${url}`);
-        response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Authorization': apiToken },
-        });
+        const headers = { 'Authorization': apiToken };
+        logCurlCommand(url, 'GET', headers);
+        response = await fetch(url, { method: 'GET', headers });
         break;
+      }
 
-      case 'checkStatus':
+      case 'checkStatus': {
         if (!appId) {
           return new Response(
             JSON.stringify({ error: 'Missing appId' }),
@@ -98,12 +101,11 @@ serve(async (req) => {
           );
         }
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/status`;
-        console.log(`Checking status at: ${url}`);
-        response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Authorization': apiToken },
-        });
+        const headers = { 'Authorization': apiToken };
+        logCurlCommand(url, 'GET', headers);
+        response = await fetch(url, { method: 'GET', headers });
         break;
+      }
 
       default:
         return new Response(

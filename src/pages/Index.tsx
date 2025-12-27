@@ -1,17 +1,29 @@
 import { useState } from 'react';
 import { AuthPanel } from '@/components/AuthPanel';
 import { BitriseGuide } from '@/components/BitriseGuide';
+import { AppSelector } from '@/components/AppSelector';
 import { UploadZone } from '@/components/UploadZone';
 import { UploadHistory } from '@/components/UploadHistory';
 import { useUploadHistory } from '@/hooks/useUploadHistory';
 import { usePersistedCredentials } from '@/hooks/usePersistedCredentials';
 import { useLastArtifact } from '@/hooks/useLastArtifact';
+import { useLastUsedApp } from '@/hooks/useLastUsedApp';
+import { ConnectedApp } from '@/lib/bitriseApi';
 import { Rocket } from 'lucide-react';
+
 const Index = () => {
   const { apiToken, appId, isLoaded, setApiToken, setAppId } = usePersistedCredentials();
   const { lastArtifact, saveLastArtifact, clearLastArtifact } = useLastArtifact();
+  const { lastUsedAppId, saveLastUsedApp } = useLastUsedApp();
   const [isConnected, setIsConnected] = useState(false);
+  const [selectedApp, setSelectedApp] = useState<ConnectedApp | null>(null);
   const { history, addRecord, clearHistory } = useUploadHistory();
+
+  const handleAppSelect = (app: ConnectedApp) => {
+    setSelectedApp(app);
+    setAppId(app.id);
+    saveLastUsedApp(app.id);
+  };
 
   if (!isLoaded) {
     return null; // Wait for credentials to load
@@ -35,7 +47,7 @@ const Index = () => {
 
         {/* 2-Column Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Column - Authentication */}
+          {/* Left Column - Authentication & Guide */}
           <div className="lg:col-span-4">
             <div className="lg:sticky lg:top-8 space-y-6">
               <AuthPanel
@@ -50,12 +62,20 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Right Column - Uploader and History */}
+          {/* Right Column - App Selector, Uploader and History */}
           <div className="lg:col-span-8 space-y-6">
+            <AppSelector
+              apiToken={apiToken}
+              isConnected={isConnected}
+              selectedAppId={selectedApp?.id || appId || null}
+              lastUsedAppId={lastUsedAppId}
+              onAppSelect={handleAppSelect}
+            />
+
             <UploadZone
               apiToken={apiToken}
-              appId={appId}
-              isConnected={isConnected}
+              appId={selectedApp?.id || appId}
+              isConnected={isConnected && !!(selectedApp?.id || appId)}
               onUploadComplete={addRecord}
               lastArtifact={lastArtifact}
               onFileSave={saveLastArtifact}

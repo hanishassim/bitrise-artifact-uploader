@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { KeyRound, Loader2, CheckCircle, XCircle } from 'lucide-react';
-import { testConnection } from '@/lib/bitriseApi';
+import { listConnectedApps } from '@/lib/bitriseApi';
+
+const WORKSPACE_ID = '7df0c6a424a76e9d';
 
 interface AuthPanelProps {
   apiToken: string;
@@ -17,27 +19,44 @@ interface AuthPanelProps {
 
 export function AuthPanel({
   apiToken,
-  appId,
   onApiTokenChange,
-  onAppIdChange,
   isConnected,
   onConnectionChange,
 }: AuthPanelProps) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
+  // Auto-test connection when API token changes and has content
+  useEffect(() => {
+    if (apiToken.trim() && !isConnected && !testing) {
+      // Debounce the auto-test
+      const timer = setTimeout(() => {
+        handleTestConnection();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [apiToken]);
+
   const handleTestConnection = async () => {
-    if (!apiToken.trim() || !appId.trim()) {
-      setTestResult({ success: false, message: 'Please enter both API token and App ID' });
+    if (!apiToken.trim()) {
+      setTestResult({ success: false, message: 'Please enter your API token' });
       return;
     }
 
     setTesting(true);
     setTestResult(null);
 
-    const result = await testConnection(apiToken, appId);
-    setTestResult(result);
-    onConnectionChange(result.success);
+    // Test by listing connected apps for the workspace
+    const result = await listConnectedApps(apiToken, WORKSPACE_ID);
+    
+    if (result.success) {
+      setTestResult({ success: true, message: 'Connected successfully!' });
+      onConnectionChange(true);
+    } else {
+      setTestResult({ success: false, message: result.error || 'Connection failed' });
+      onConnectionChange(false);
+    }
+    
     setTesting(false);
   };
 
@@ -50,7 +69,7 @@ export function AuthPanel({
           </div>
           <div>
             <CardTitle className="text-lg">Authentication</CardTitle>
-            <CardDescription>Enter your Bitrise credentials</CardDescription>
+            <CardDescription>Enter your Bitrise API token</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -69,43 +88,30 @@ export function AuthPanel({
             }}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="app-id">Connected App ID</Label>
-          <Input
-            id="app-id"
-            type="text"
-            placeholder="Enter your Connected App ID"
-            value={appId}
-            onChange={(e) => {
-              onAppIdChange(e.target.value);
-              onConnectionChange(false);
-              setTestResult(null);
-            }}
-          />
-        </div>
         <div className="flex items-center gap-3">
           <Button
             onClick={handleTestConnection}
-            disabled={testing || !apiToken.trim() || !appId.trim()}
+            disabled={testing || !apiToken.trim()}
             variant="secondary"
             className="flex-shrink-0"
           >
             {testing ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Testing...
+                Connecting...
+              </>
+            ) : isConnected ? (
+              <>
+                <CheckCircle className="mr-2 h-4 w-4" />
+                Connected
               </>
             ) : (
-              'Test Connection'
+              'Connect'
             )}
           </Button>
-          {testResult && (
-            <div className={`flex items-center gap-2 text-sm ${testResult.success ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
-              {testResult.success ? (
-                <CheckCircle className="h-4 w-4" />
-              ) : (
-                <XCircle className="h-4 w-4" />
-              )}
+          {testResult && !isConnected && (
+            <div className="flex items-center gap-2 text-sm text-destructive">
+              <XCircle className="h-4 w-4" />
               <span>{testResult.message}</span>
             </div>
           )}

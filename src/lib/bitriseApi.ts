@@ -21,11 +21,56 @@ export interface UploadResult {
   artifactStatus?: ArtifactStatus;
 }
 
+export interface ConnectedApp {
+  id: string;
+  app_name?: string;
+  project_title?: string;
+  store_app_id?: string;
+  platform?: 'ios' | 'android';
+  icon_url?: string;
+}
+
 function generateUUID(): string {
   const hex = Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map(b => b.toString(16).padStart(2, '0'))
     .join('');
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+}
+
+export async function listConnectedApps(
+  apiToken: string, 
+  workspaceId: string
+): Promise<{ success: boolean; data?: ConnectedApp[]; error?: string }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
+      body: { action: 'listConnectedApps', apiToken, workspaceId }
+    });
+
+    if (error) {
+      return { success: false, error: 'Network error. Please check your connection.' };
+    }
+
+    const status = data.status;
+
+    if (status === 200) {
+      const apps: ConnectedApp[] = data.data.data || [];
+      return { success: true, data: apps };
+    } else if (status === 400) {
+      return { success: false, error: 'Invalid request parameters' };
+    } else if (status === 401) {
+      return { success: false, error: 'Invalid or expired API token' };
+    } else if (status === 403) {
+      return { success: false, error: 'Access forbidden. Check your workspace permissions.' };
+    } else if (status === 404) {
+      return { success: false, error: 'Workspace not found' };
+    } else if (status === 500) {
+      return { success: false, error: 'Bitrise server error. Please try again later.' };
+    } else {
+      return { success: false, error: `Unexpected error (${status})` };
+    }
+  } catch (error) {
+    return { success: false, error: 'Network error. Please check your connection.' };
+  }
 }
 
 export async function testConnection(apiToken: string, appId: string): Promise<{ success: boolean; message: string }> {

@@ -225,32 +225,26 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
               </p>
             </div>
 
-            {/* Last used artifact prompt */}
+            {/* Last used artifact hint */}
             {lastArtifact && isConnected && (
-              <div className="rounded-lg border border-primary/30 bg-primary/5 p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <RotateCcw className="h-4 w-4 text-primary flex-shrink-0" />
-                  <p className="text-sm font-medium text-foreground">Previously used artifact</p>
-                </div>
-                <div className="flex items-center gap-3 rounded-lg bg-background/50 p-3 mb-3">
-                  <FileUp className="h-5 w-5 text-primary flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate">{lastArtifact.name}</p>
-                    <p className="text-xs text-muted-foreground">{formatFileSize(lastArtifact.size)}</p>
+              <div 
+                onClick={() => fileInputRef.current?.click()}
+                className="group cursor-pointer rounded-lg border border-primary/30 bg-primary/5 p-4 transition-all hover:border-primary/50 hover:bg-primary/10"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 group-hover:bg-primary/20 transition-colors">
+                    <FileUp className="h-5 w-5 text-primary" />
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
+                      {lastArtifact.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(lastArtifact.size)} • Click to select from your device
+                    </p>
+                  </div>
+                  <RotateCcw className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors flex-shrink-0" />
                 </div>
-                <p className="text-xs text-muted-foreground mb-3">
-                  For security, browsers cannot auto-load files. Please re-select the same file from your device.
-                </p>
-                <Button
-                  variant="default"
-                  size="sm"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="w-full"
-                >
-                  <FileUp className="mr-2 h-4 w-4" />
-                  Select "{lastArtifact.name}"
-                </Button>
               </div>
             )}
           </div>

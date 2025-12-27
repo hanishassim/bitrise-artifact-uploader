@@ -22,7 +22,7 @@ export function BitriseGuide() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-foreground">API Token</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Go to your Bitrise Account Settings → Security → Personal Access Tokens
+                Account Settings → Security (left panel) → Personal access tokens → Create or edit token
               </p>
               <a
                 href="https://app.bitrise.io/me/profile#/security"
@@ -30,7 +30,7 @@ export function BitriseGuide() {
                 rel="noopener noreferrer"
                 className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
               >
-                Open Security Settings
+                Open Personal Access Tokens
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>

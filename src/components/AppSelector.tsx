@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -9,20 +9,22 @@ import { listConnectedApps, ConnectedApp } from '@/lib/bitriseApi';
 
 interface AppSelectorProps {
   apiToken: string;
+  workspaceId: string;
   isConnected: boolean;
   selectedAppId: string | null;
   lastUsedAppId: string | null;
   onAppSelect: (app: ConnectedApp) => void;
+  addApiLog: (log: { curlCommand?: string; logs?: string[] }) => void;
 }
 
-const WORKSPACE_ID = '7df0c6a424a76e9d';
-
-export function AppSelector({ 
-  apiToken, 
-  isConnected, 
-  selectedAppId, 
+export function AppSelector({
+  apiToken,
+  workspaceId,
+  isConnected,
+  selectedAppId,
   lastUsedAppId,
-  onAppSelect 
+  onAppSelect,
+  addApiLog,
 }: AppSelectorProps) {
   const [apps, setApps] = useState<ConnectedApp[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,26 +32,31 @@ export function AppSelector({
   const [searchQuery, setSearchQuery] = useState('');
   const [platformFilter, setPlatformFilter] = useState<'all' | 'ios' | 'android'>('all');
 
-  const fetchApps = async () => {
-    if (!isConnected || !apiToken) return;
-    
+  const fetchApps = useCallback(async () => {
+    if (!isConnected || !apiToken || !workspaceId) return;
+
     setIsLoading(true);
     setError(null);
-    
-    const result = await listConnectedApps(apiToken, WORKSPACE_ID);
-    
+
+    const result = await listConnectedApps(apiToken, workspaceId);
+
+    addApiLog({
+      curlCommand: result.curlCommand,
+      logs: result.logs,
+    });
+
     if (result.success && result.data) {
       setApps(result.data);
     } else {
       setError(result.error || 'Failed to load apps');
     }
-    
+
     setIsLoading(false);
-  };
+  }, [isConnected, apiToken, workspaceId, addApiLog]);
 
   useEffect(() => {
     fetchApps();
-  }, [isConnected, apiToken]);
+  }, [fetchApps]);
 
   const filteredApps = useMemo(() => {
     return apps.filter(app => {

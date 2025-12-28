@@ -1,125 +1,183 @@
+// Supabase Edge Function: bitrise-proxy
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
 const RM_API_HOST = 'https://api.bitrise.io';
 
-serve(async (req) => {
+Deno.serve(async (req: Request) => {
+  const logs: string[] = [];
+  logs.push(`Request received at ${new Date().toISOString()}`);
+
   const origin = req.headers.get('Origin');
-  // Allow requests from localhost on any port
   const isAllowedOrigin = origin && /^http:\/\/localhost:\d+$/.test(origin);
+  logs.push(`Origin: ${origin}, Allowed: ${isAllowedOrigin}`);
 
   const corsHeaders = {
     'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-workspace-id',
   };
 
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    logs.push('Handling OPTIONS preflight request');
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes } = await req.json();
-
-    console.log(`Bitrise proxy action: ${action}`);
+    logs.push('Parsing request body...');
+    const body = await req.json();
+    const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes, whatsNew } = body;
+    logs.push(`Action: ${action}`);
 
     if (!apiToken) {
+      logs.push('Error: Missing apiToken');
       return new Response(
-        JSON.stringify({ error: 'Missing apiToken' }),
+        JSON.stringify({ error: 'Missing apiToken', logs }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     let response: Response;
     let url: string;
+    let curlCommand: string | undefined;
+
+    const generateCurlCommand = (url: string, method: string, headers: Record<string, string>, body?: string) => {
+      const headerPart = Object.entries(headers).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
+      let command = `curl -X ${method} ${headerPart} '${url}'`;
+      if (body) {
+        command += ` -d '${body.replace(/'/g, "'\\''")}'`;
+      }
+      return command;
+    };
 
     switch (action) {
-      case 'listConnectedApps':
+      case 'listConnectedApps': {
+        logs.push('Action: listConnectedApps');
         if (!workspaceId) {
+          logs.push('Error: Missing workspaceId');
           return new Response(
-            JSON.stringify({ error: 'Missing workspaceId' }),
+            JSON.stringify({ error: 'Missing workspaceId', logs }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        url = `${RM_API_HOST}/release-management/v1/workspaces/${workspaceId}/connected-apps?items_per_page=50`;
-        console.log(`Listing connected apps from: ${url}`);
-        response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Authorization': apiToken },
-        });
+        url = `${RM_API_HOST}/release-management/v1/connected-apps?workspace_slug=${workspaceId}&items_per_page=50&page=1`;
+        const headers = { 'Authorization': apiToken };
+        curlCommand = generateCurlCommand(url, 'GET', headers);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'GET', headers });
+        logs.push(`Bitrise API response status: ${response.status}`);
         break;
+      }
 
-      case 'testConnection':
+      case 'testConnection': {
+        logs.push('Action: testConnection');
         if (!appId) {
+          logs.push('Error: Missing appId');
           return new Response(
-            JSON.stringify({ error: 'Missing appId' }),
+            JSON.stringify({ error: 'Missing appId', logs }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}`;
-        console.log(`Testing connection to: ${url}`);
-        response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Authorization': apiToken },
-        });
+        const headers = { 'Authorization': apiToken };
+        curlCommand = generateCurlCommand(url, 'GET', headers);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'GET', headers });
+        logs.push(`Bitrise API response status: ${response.status}`);
         break;
-
-      case 'getUploadUrl':
-        if (!appId) {
+      }
+      case 'getUploadUrl': {
+        logs.push('Action: getUploadUrl');
+        if (!appId || !fileName || !fileSizeBytes) {
+          logs.push('Error: Missing required parameters for getUploadUrl');
           return new Response(
-            JSON.stringify({ error: 'Missing appId' }),
+            JSON.stringify({ error: 'Missing appId, fileName, or fileSizeBytes', logs }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        if (!artifactId || !fileName || !fileSizeBytes) {
-          return new Response(
-            JSON.stringify({ error: 'Missing artifactId, fileName, or fileSizeBytes' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/upload-url?file_name=${encodeURIComponent(fileName)}&file_size_bytes=${fileSizeBytes}`;
-        console.log(`Getting upload URL from: ${url}`);
-        response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Authorization': apiToken },
-        });
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/upload-url`;
+        const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
+        const payload = JSON.stringify({ file_name: fileName, file_size_bytes: fileSizeBytes });
+        curlCommand = generateCurlCommand(url, 'POST', headers, payload);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'POST', headers, body: payload });
+        logs.push(`Bitrise API response status: ${response.status}`);
         break;
+      }
 
-      case 'checkStatus':
-        if (!appId) {
+      case 'checkStatus': {
+        logs.push('Action: checkStatus');
+        if (!appId || !artifactId) {
+          logs.push('Error: Missing appId or artifactId');
           return new Response(
-            JSON.stringify({ error: 'Missing appId' }),
+            JSON.stringify({ error: 'Missing appId or artifactId', logs }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        if (!artifactId) {
-          return new Response(
-            JSON.stringify({ error: 'Missing artifactId' }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/status`;
-        console.log(`Checking status at: ${url}`);
-        response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Authorization': apiToken },
-        });
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/artifacts/${artifactId}`;
+        const headers = { 'Authorization': apiToken };
+        curlCommand = generateCurlCommand(url, 'GET', headers);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'GET', headers });
+        logs.push(`Bitrise API response status: ${response.status}`);
         break;
+      }
 
+      case 'submitWhatsNew': {
+        logs.push('Action: submitWhatsNew');
+        if (!appId || !artifactId || !whatsNew) {
+          logs.push('Error: Missing required parameters for submitWhatsNew');
+          return new Response(
+            JSON.stringify({ error: 'Missing appId, artifactId, or whatsNew', logs }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/artifacts/${artifactId}/whats-new`;
+        const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
+        const payload = JSON.stringify({ whats_new_text: whatsNew });
+        curlCommand = generateCurlCommand(url, 'POST', headers, payload);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'POST', headers, body: payload });
+        logs.push(`Bitrise API response status: ${response.status}`);
+        break;
+      }
+
+      case 'enablePublicPage': {
+        logs.push('Action: enablePublicPage');
+        if (!appId || !artifactId) {
+          logs.push('Error: Missing appId or artifactId');
+          return new Response(
+            JSON.stringify({ error: 'Missing appId or artifactId', logs }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/artifacts/${artifactId}/public-page`;
+        const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
+        const payload = JSON.stringify({ public_install_page_enabled: true });
+        curlCommand = generateCurlCommand(url, 'POST', headers, payload);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'POST', headers, body: payload });
+        logs.push(`Bitrise API response status: ${response.status}`);
+        break;
+      }
       default:
+        logs.push(`Error: Invalid action - ${action}`);
         return new Response(
-          JSON.stringify({ error: 'Invalid action' }),
+          JSON.stringify({ error: 'Invalid action', logs }),
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
     }
 
-    const data = await response.json().catch(() => ({}));
-    console.log(`Response status: ${response.status}`);
+    logs.push('Parsing response from Bitrise...');
+    const data = await response.json().catch((e) => {
+      logs.push(`Error parsing Bitrise response JSON: ${e.message}`);
+      return { error: 'Failed to parse JSON response from Bitrise' };
+    });
+    logs.push(`Final response status: ${response.status}`);
 
     return new Response(
-      JSON.stringify({ status: response.status, data }),
-      { 
-        status: 200, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
+      JSON.stringify({ status: response.status, data, curlCommand, logs }),
+      {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }
     );
 
@@ -129,7 +187,7 @@ serve(async (req) => {
       action: req.method,
       error: error instanceof Error ? error.message : 'Unknown error',
     });
-    
+
     // Return generic error to client
     return new Response(
       JSON.stringify({ error: 'Request processing failed' }),

@@ -1,64 +1,59 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { KeyRound, Loader2, CheckCircle, XCircle } from 'lucide-react';
-import { listConnectedApps } from '@/lib/bitriseApi';
-
-const WORKSPACE_ID = '7df0c6a424a76e9d';
+import { testConnection } from '@/lib/bitriseApi';
 
 interface AuthPanelProps {
   apiToken: string;
-  appId: string;
+  workspaceId: string;
   onApiTokenChange: (value: string) => void;
-  onAppIdChange: (value: string) => void;
+  onWorkspaceIdChange: (value: string) => void;
   isConnected: boolean;
   onConnectionChange: (connected: boolean) => void;
+  addApiLog: (log: { curlCommand?: string; logs?: string[] }) => void;
 }
 
 export function AuthPanel({
   apiToken,
+  workspaceId,
   onApiTokenChange,
+  onWorkspaceIdChange,
   isConnected,
   onConnectionChange,
+  addApiLog,
 }: AuthPanelProps) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
 
-  // Auto-test connection when API token changes and has content
-  useEffect(() => {
-    if (apiToken.trim() && !isConnected && !testing) {
-      // Debounce the auto-test
-      const timer = setTimeout(() => {
-        handleTestConnection();
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [apiToken]);
-
-  const handleTestConnection = async () => {
-    if (!apiToken.trim()) {
-      setTestResult({ success: false, message: 'Please enter your API token' });
+  const handleTestConnection = useCallback(async () => {
+    if (!apiToken.trim() || !workspaceId.trim()) {
+      setTestResult({ success: false, message: 'API token and Workspace ID are required' });
       return;
     }
 
     setTesting(true);
     setTestResult(null);
 
-    // Test by listing connected apps for the workspace
-    const result = await listConnectedApps(apiToken, WORKSPACE_ID);
-    
+    const result = await testConnection(apiToken, workspaceId);
+
+    addApiLog({
+      curlCommand: result.curlCommand,
+      logs: result.logs,
+    });
+
     if (result.success) {
       setTestResult({ success: true, message: 'Connected successfully!' });
       onConnectionChange(true);
     } else {
-      setTestResult({ success: false, message: result.error || 'Connection failed' });
+      setTestResult({ success: false, message: result.message || 'Connection failed' });
       onConnectionChange(false);
     }
-    
+
     setTesting(false);
-  };
+  }, [apiToken, workspaceId, addApiLog, onConnectionChange]);
 
   return (
     <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
@@ -69,7 +64,7 @@ export function AuthPanel({
           </div>
           <div>
             <CardTitle className="text-lg">Authentication</CardTitle>
-            <CardDescription>Enter your Bitrise API token</CardDescription>
+            <CardDescription>Enter your Bitrise credentials</CardDescription>
           </div>
         </div>
       </CardHeader>
@@ -88,10 +83,24 @@ export function AuthPanel({
             }}
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="workspace-id">Workspace ID</Label>
+          <Input
+            id="workspace-id"
+            type="text"
+            placeholder="Enter your Workspace ID"
+            value={workspaceId}
+            onChange={(e) => {
+              onWorkspaceIdChange(e.target.value);
+              onConnectionChange(false);
+              setTestResult(null);
+            }}
+          />
+        </div>
         <div className="flex items-center gap-3">
           <Button
             onClick={handleTestConnection}
-            disabled={testing || !apiToken.trim()}
+            disabled={testing || !apiToken.trim() || !workspaceId.trim()}
             variant="secondary"
             className="flex-shrink-0"
           >

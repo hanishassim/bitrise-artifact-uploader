@@ -91,7 +91,7 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
             <p className="mt-3 text-sm text-muted-foreground">No uploads yet</p>
           </div>
         ) : (
-          <ScrollArea className="h-auto max-h-[400px] pr-4">
+          <ScrollArea className={`h-auto pr-4 transition-all duration-300 ease-in-out ${expandedId ? 'max-h-[700px]' : 'max-h-[400px]'}`}>
             <div className="space-y-3">
               {history.map((record) => (
                 <div

@@ -113,7 +113,7 @@ export function AuthPanel({
           <Label htmlFor="api-token">Personal Access Token</Label>
           <Input
             id="api-token"
-            type="password"
+            type="text"
             placeholder="Enter your Bitrise PAT"
             value={apiToken}
             onChange={(e) => onApiTokenChange(e.target.value)}
@@ -127,10 +127,10 @@ export function AuthPanel({
           </Button>
         ) : organizations.length > 1 && (
           <div className="space-y-2">
-            <Label htmlFor="org-select">Select Organization</Label>
+            <Label htmlFor="org-select">Organization</Label>
             <Select value={workspaceId} onValueChange={handleOrgSelect}>
               <SelectTrigger id="org-select" className="bg-background/50">
-                <SelectValue placeholder="Choose an organization..." />
+                <SelectValue placeholder="Select organization" />
               </SelectTrigger>
               <SelectContent>
                 {organizations.map((org) => (

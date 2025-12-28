@@ -74,12 +74,10 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
               <CardDescription>Recent uploads stored locally</CardDescription>
             </div>
           </div>
-          {history.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={onClearHistory}>
-              <Trash2 className="mr-2 h-4 w-4" />
-              Clear
-            </Button>
-          )}
+          <Button variant="ghost" onClick={onClearHistory}>
+            <Trash2 className="h-4 w-4" />
+            Clear
+          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -116,9 +114,8 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
                           </Badge>
                         </div>
                         {record.publicInstallPageUrl && (
-                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${
-                            expandedId === record.id ? 'rotate-180' : ''
-                          }`} />
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${expandedId === record.id ? 'rotate-180' : ''
+                            }`} />
                         )}
                       </div>
                       <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">

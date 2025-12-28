@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Smartphone, Check, AlertCircle, RefreshCw } from 'lucide-react';
-import { FaApple, FaAndroid } from "react-icons/fa";
+import { FaApple, FaAndroid, FaAppStore } from "react-icons/fa";
 import { listConnectedApps, ConnectedApp } from '@/lib/bitriseApi';
 
 interface AppSelectorProps {
@@ -116,16 +116,22 @@ export function AppSelector({
     <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">
-            Select App {organizationName && <span className="text-muted-foreground">for {organizationName}</span>}
-          </CardTitle>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+              <FaAppStore className="h-5 w-5 text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-lg">
+                Select App {organizationName && <span className="text-muted-foreground">for {organizationName}</span>}
+              </CardTitle>
+            </div>
+          </div>
           <Button
             variant="ghost"
-            size="icon"
             onClick={fetchApps}
-            disabled={isLoading}
-          >
+            disabled={isLoading}>
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
           </Button>
         </div>
       </CardHeader>

@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
   try {
     logs.push('Parsing request body...');
     const body = await req.json();
-    const { action, apiToken, appId, orgSlug, artifactId, fileName, fileSizeBytes, whatsNew, withPublicPage } = body;
+    const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes, whatsNew, withPublicPage } = body;
     logs.push(`Action: ${action}`);
 
     if (!apiToken) {
@@ -62,25 +62,32 @@ Deno.serve(async (req: Request) => {
 
       case 'listConnectedApps': {
         logs.push('Action: listConnectedApps');
-        if (!orgSlug) {
-            logs.push('Error: Missing orgSlug');
-            return new Response(
-                JSON.stringify({ error: 'Missing orgSlug', logs }),
-                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-            );
+        if (!workspaceId) {
+          logs.push('Error: Missing workspaceId');
+          return new Response(
+            JSON.stringify({ error: 'Missing workspaceId', logs }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
         }
-        url = `${RM_API_HOST}/v0.1/organizations/${orgSlug}/apps`;
+        url = `${RM_API_HOST}/release-management/v1/connected-apps?workspace_slug=${workspaceId}&items_per_page=50&page=1`;
         const headers = { 'Authorization': apiToken };
         curlCommand = generateCurlCommand(url, 'GET', headers);
         logs.push(curlCommand);
         response = await fetch(url, { method: 'GET', headers });
         logs.push(`Bitrise API response status: ${response.status}`);
         break;
-    }
+      }
 
       case 'testConnection': {
         logs.push('Action: testConnection');
-        url = `${RM_API_HOST}/v0.1/me`;
+        if (!appId) {
+          logs.push('Error: Missing appId');
+          return new Response(
+            JSON.stringify({ error: 'Missing appId', logs }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}`;
         const headers = { 'Authorization': apiToken };
         curlCommand = generateCurlCommand(url, 'GET', headers);
         logs.push(curlCommand);

@@ -18,12 +18,10 @@ const Index = () => {
     apiToken,
     appId,
     workspaceId,
-    organizationName,
     isLoaded,
     setApiToken,
     setAppId,
     setWorkspaceId,
-    setOrganizationName
   } = usePersistedCredentials();
   const { lastArtifact, saveLastArtifact, clearLastArtifact } = useLastArtifact();
   const { lastUsedAppId, saveLastUsedApp } = useLastUsedApp();
@@ -65,11 +63,9 @@ const Index = () => {
             <div className="lg:sticky lg:top-8 space-y-6">
               <AuthPanel
                 apiToken={apiToken}
+                workspaceId={workspaceId}
                 onApiTokenChange={setApiToken}
-                onWorkspaceIdChange={(id, name) => {
-                  setWorkspaceId(id);
-                  setOrganizationName(name);
-                }}
+                onWorkspaceIdChange={setWorkspaceId}
                 isConnected={isConnected}
                 onConnectionChange={setIsConnected}
                 addApiLog={addLog}
@@ -82,8 +78,7 @@ const Index = () => {
           <div className="lg:col-span-8 space-y-6">
             <AppSelector
               apiToken={apiToken}
-              orgSlug={workspaceId}
-              organizationName={organizationName}
+              workspaceId={workspaceId}
               isConnected={isConnected}
               selectedAppId={selectedApp?.id || appId || null}
               lastUsedAppId={lastUsedAppId}

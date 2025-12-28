@@ -51,40 +51,28 @@ export function AuthPanel({
     setSelectedOrg('');
     onWorkspaceIdChange('');
 
-    const result = await testConnection(apiToken);
+    setIsFetchingOrgs(true);
+    const orgsResult = await getOrganizations(apiToken);
+    addApiLog({ curlCommand: orgsResult.curlCommand, logs: orgsResult.logs });
+    setIsFetchingOrgs(false);
 
-    addApiLog({
-      curlCommand: result.curlCommand,
-      logs: result.logs,
-    });
-
-    if (result.success) {
-      setTestResult({ success: true, message: 'Token is valid, fetching organizations...' });
-      setIsFetchingOrgs(true);
-      const orgsResult = await getOrganizations(apiToken);
-      addApiLog({ curlCommand: orgsResult.curlCommand, logs: orgsResult.logs });
-      setIsFetchingOrgs(false);
-
-      if (orgsResult.success && orgsResult.data) {
-        if (orgsResult.data.length === 0) {
-          setTestResult({ success: false, message: 'No organizations found for this token.' });
-        } else {
-          setOrganizations(orgsResult.data);
-          if (orgsResult.data.length === 1) {
-            const org = orgsResult.data[0];
-            setSelectedOrg(org.slug);
-            onWorkspaceIdChange(org.slug);
-            onConnectionChange(true);
-            setTestResult({ success: true, message: `Connected to ${org.name}` });
-          } else {
-            setTestResult({ success: true, message: 'Please select an organization.' });
-          }
-        }
+    if (orgsResult.success && orgsResult.data) {
+      if (orgsResult.data.length === 0) {
+        setTestResult({ success: false, message: 'No organizations found for this token.' });
       } else {
-        setTestResult({ success: false, message: orgsResult.error || 'Failed to fetch organizations.' });
+        setOrganizations(orgsResult.data);
+        if (orgsResult.data.length === 1) {
+          const org = orgsResult.data[0];
+          setSelectedOrg(org.slug);
+          onWorkspaceIdChange(org.slug);
+          onConnectionChange(true);
+          setTestResult({ success: true, message: `Connected to ${org.name}` });
+        } else {
+          setTestResult({ success: true, message: 'Please select an organization.' });
+        }
       }
     } else {
-      setTestResult({ success: false, message: result.message || 'Connection failed' });
+      setTestResult({ success: false, message: orgsResult.error || 'Failed to fetch organizations.' });
     }
 
     setTesting(false);

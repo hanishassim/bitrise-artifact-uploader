@@ -82,11 +82,11 @@ function generateUUID(): string {
 
 export async function listConnectedApps(
   apiToken: string,
-  orgSlug: string
+  workspaceId: string
 ): Promise<{ success: boolean; data?: ConnectedApp[]; error?: string; curlCommand?: string; logs?: string[] }> {
   try {
     const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
-      body: { action: 'listConnectedApps', apiToken, orgSlug }
+      body: { action: 'listConnectedApps', apiToken, workspaceId }
     });
 
     if (error) {
@@ -126,11 +126,12 @@ export async function listConnectedApps(
 }
 
 export async function testConnection(
-  apiToken: string
+  apiToken: string,
+  workspaceId: string
 ): Promise<{ success: boolean; message: string; curlCommand?: string; logs?: string[] }> {
   try {
     const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
-      body: { action: 'testConnection', apiToken }
+      body: { action: 'listConnectedApps', apiToken, workspaceId }
     });
 
     if (error) {

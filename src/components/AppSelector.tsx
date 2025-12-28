@@ -10,6 +10,7 @@ import { listConnectedApps, ConnectedApp } from '@/lib/bitriseApi';
 interface AppSelectorProps {
   apiToken: string;
   workspaceId: string;
+  organizationName: string;
   isConnected: boolean;
   selectedAppId: string | null;
   lastUsedAppId: string | null;
@@ -17,12 +18,10 @@ interface AppSelectorProps {
   addApiLog: (log: { curlCommand?: string; logs?: string[] }) => void;
 }
 
-// Height for a single app item (including gap)
-const APP_ITEM_HEIGHT = 76; // 64px item + 8px gap + 4px padding adjustment
-
 export function AppSelector({
   apiToken,
   workspaceId,
+  organizationName,
   isConnected,
   selectedAppId,
   lastUsedAppId,
@@ -58,8 +57,16 @@ export function AppSelector({
   }, [isConnected, apiToken, workspaceId, addApiLog]);
 
   useEffect(() => {
-    fetchApps();
-  }, [fetchApps]);
+    // Reset apps when connection status changes
+    if (!isConnected) {
+      setApps([]);
+      setError(null);
+      setSearchQuery('');
+    } else {
+      fetchApps();
+    }
+  }, [isConnected, fetchApps]);
+
 
   const filteredApps = useMemo(() => {
     return apps.filter(app => {
@@ -102,7 +109,9 @@ export function AppSelector({
     <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Select App</CardTitle>
+          <CardTitle className="text-lg">
+            Select App {organizationName && <span className="text-muted-foreground">for {organizationName}</span>}
+          </CardTitle>
           <Button 
             variant="ghost" 
             size="icon"

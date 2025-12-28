@@ -27,6 +27,7 @@ const Index = () => {
   const { lastUsedAppId, saveLastUsedApp } = useLastUsedApp();
   const [isConnected, setIsConnected] = useState(false);
   const [selectedApp, setSelectedApp] = useState<ConnectedApp | null>(null);
+  const [organizationName, setOrganizationName] = useState('');
   const { history, addRecord, clearHistory } = useUploadHistory();
   const { logs, addLog, clearLogs } = useApiLogs();
 
@@ -66,6 +67,7 @@ const Index = () => {
                 workspaceId={workspaceId}
                 onApiTokenChange={setApiToken}
                 onWorkspaceIdChange={setWorkspaceId}
+                onOrganizationNameChange={setOrganizationName}
                 isConnected={isConnected}
                 onConnectionChange={setIsConnected}
                 addApiLog={addLog}
@@ -79,6 +81,7 @@ const Index = () => {
             <AppSelector
               apiToken={apiToken}
               workspaceId={workspaceId}
+              organizationName={organizationName}
               isConnected={isConnected}
               selectedAppId={selectedApp?.id || appId || null}
               lastUsedAppId={lastUsedAppId}

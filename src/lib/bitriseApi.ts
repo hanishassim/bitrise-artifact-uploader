@@ -418,7 +418,8 @@ export function uploadArtifact(
     const artifactId = generateUUID();
 
     const upload = async () => {
-      // Step 1: Get upload URL from Bitrise API
+      // Step 1: Get a pre-signed upload URL from the Bitrise API.
+      // This is a GET request, as confirmed by the Swagger documentation.
       const uploadUrlResult = await getUploadUrl(apiToken, appId, artifactId, file.name, file.size);
       addApiLog({ curlCommand: uploadUrlResult.curlCommand, logs: uploadUrlResult.logs });
 
@@ -432,7 +433,8 @@ export function uploadArtifact(
 
       const uploadInfo = uploadUrlResult.data;
 
-      // Step 2: Upload to Google Cloud Storage using the provided URL and headers
+      // Step 2: Perform the actual file upload to the pre-signed URL.
+      // The response from getUploadUrl includes the exact URL, method (PUT), and headers required for this request.
     const xhr = new XMLHttpRequest();
     const startTime = Date.now();
     let lastLoaded = 0;

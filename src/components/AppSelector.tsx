@@ -82,23 +82,6 @@ export function AppSelector({
     });
   }, [apps, platformFilter, searchQuery]);
 
-  // Sort apps to show last used first
-  const sortedApps = useMemo(() => {
-    if (!lastUsedAppId) return filteredApps;
-    
-    return [...filteredApps].sort((a, b) => {
-      if (a.id === lastUsedAppId) return -1;
-      if (b.id === lastUsedAppId) return 1;
-      return 0;
-    });
-  }, [filteredApps, lastUsedAppId]);
-
-  // Calculate dynamic height based on number of apps (max 3 visible)
-  const listHeight = useMemo(() => {
-    const visibleApps = Math.min(sortedApps.length, 3);
-    if (visibleApps === 0) return 120; // Empty state height
-    return visibleApps * APP_ITEM_HEIGHT + 8; // Add some padding
-  }, [sortedApps.length]);
 
   if (!isConnected) {
     return (
@@ -198,9 +181,9 @@ export function AppSelector({
 
         {/* Apps List */}
         {!isLoading && !error && (
-          <ScrollArea style={{ height: listHeight }} className="pr-2">
+          <ScrollArea className="h-auto max-h-96 pr-2">
             <div className="space-y-2">
-              {sortedApps.length === 0 ? (
+              {filteredApps.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Smartphone className="h-8 w-8 text-muted-foreground/50 mb-2" />
                   <p className="text-sm text-muted-foreground">
@@ -210,7 +193,7 @@ export function AppSelector({
                   </p>
                 </div>
               ) : (
-                sortedApps.map((app) => (
+                filteredApps.map((app) => (
                   <button
                     key={app.id}
                     onClick={() => onAppSelect(app)}
@@ -255,11 +238,6 @@ export function AppSelector({
                         <p className="text-sm font-medium truncate text-foreground">
                           {app.app_name || 'Unnamed App'}
                         </p>
-                        {app.id === lastUsedAppId && (
-                          <span className="flex-shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                            Last used
-                          </span>
-                        )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
                         {app.project_title}

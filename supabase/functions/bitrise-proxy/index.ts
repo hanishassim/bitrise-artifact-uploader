@@ -49,6 +49,17 @@ Deno.serve(async (req: Request) => {
     };
 
     switch (action) {
+      case 'getOrganizations': {
+        logs.push('Action: getOrganizations');
+        url = `${RM_API_HOST}/v0.1/organizations`;
+        const headers = { 'Authorization': apiToken };
+        curlCommand = generateCurlCommand(url, 'GET', headers);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'GET', headers });
+        logs.push(`Bitrise API response status: ${response.status}`);
+        break;
+      }
+
       case 'listConnectedApps': {
         logs.push('Action: listConnectedApps');
         if (!workspaceId) {

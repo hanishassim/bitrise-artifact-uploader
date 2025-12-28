@@ -60,7 +60,9 @@ This project requires the `bitrise-proxy` Edge Function to be deployed to your S
     npm i supabase --save-dev
     ```
 
-2.  **Link your Supabase project:** Replace `<PROJECT_ID>` with your actual Supabase project ID.
+2.  **Update the Supabase config file:** Open `supabase/config.toml` and replace the placeholder `project_id` with your actual Supabase project ID.
+
+3.  **Link your Supabase project:**
 
     ```sh
     npx supabase link --project-ref <PROJECT_ID>

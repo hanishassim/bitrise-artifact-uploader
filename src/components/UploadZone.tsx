@@ -219,13 +219,14 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              onClick={() => isConnected && fileInputRef.current?.click()}
+              onClick={() => isConnected && selectedApp && fileInputRef.current?.click()}
               className={cn(
-                'relative flex min-h-[200px] cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all duration-300',
+                'relative flex min-h-[200px] flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 transition-all duration-300',
                 isDragging
                   ? 'border-primary bg-primary/5 scale-[1.02]'
-                  : 'border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/50',
-                !isConnected && 'cursor-not-allowed opacity-50'
+                  : 'border-muted-foreground/25',
+                isConnected && selectedApp && 'cursor-pointer hover:border-primary/50 hover:bg-muted/50',
+                (!isConnected || !selectedApp) && 'cursor-not-allowed opacity-50'
               )}
             >
               <div className={cn(
@@ -238,10 +239,10 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
                 )} />
               </div>
               <p className="mt-4 text-center font-medium text-foreground">
-                {isConnected ? `Drop your artifact here for ${selectedApp?.app_name || ''}` : 'Connect to Bitrise first'}
+                {isConnected ? (selectedApp ? `Drop artifact for ${selectedApp.app_name}`: 'Select an app to continue') : 'Connect to Bitrise first'}
               </p>
               <p className="mt-1 text-center text-sm text-muted-foreground">
-                {isConnected ? 'or click to browse • IPA, APK, AAB supported' : 'Connect then choose app to enable uploads'}
+                {isConnected ? (selectedApp ? `or click to browse • ${selectedApp.platform === 'ios' ? 'IPA supported' : 'APK, AAB supported'}` : 'Choose an app from the list above to enable uploads') : 'Connect and choose an app to enable uploads'}
               </p>
             </div>
 

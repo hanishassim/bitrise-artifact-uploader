@@ -49,12 +49,15 @@ export function AppSelector({
 
     if (result.success && result.data) {
       setApps(result.data);
+      if (result.data.length === 1) {
+        onAppSelect(result.data[0]);
+      }
     } else {
       setError(result.error || 'Failed to load apps');
     }
 
     setIsLoading(false);
-  }, [isConnected, apiToken, workspaceId, addApiLog]);
+  }, [isConnected, apiToken, workspaceId, addApiLog, onAppSelect]);
 
   useEffect(() => {
     // Reset apps when connection status changes

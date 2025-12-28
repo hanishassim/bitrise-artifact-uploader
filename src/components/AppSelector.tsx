@@ -67,6 +67,12 @@ export function AppSelector({
     }
   }, [isConnected, fetchApps]);
 
+  useEffect(() => {
+    if (apps.length === 1) {
+      onAppSelect(apps[0]);
+    }
+  }, [apps, onAppSelect]);
+
 
   const filteredApps = useMemo(() => {
     return apps.filter(app => {

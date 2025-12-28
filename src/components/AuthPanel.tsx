@@ -13,6 +13,7 @@ interface AuthPanelProps {
   onApiTokenChange: (value: string) => void;
   onWorkspaceIdChange: (value: string) => void;
   onOrganizationNameChange: (value: string) => void;
+  onOrganizationChange: () => void;
   isConnected: boolean;
   onConnectionChange: (connected: boolean) => void;
   addApiLog: (log: { curlCommand?: string; logs?: string[] }) => void;
@@ -24,6 +25,7 @@ export function AuthPanel({
   onApiTokenChange,
   onWorkspaceIdChange,
   onOrganizationNameChange,
+  onOrganizationChange,
   isConnected,
   onConnectionChange,
   addApiLog,
@@ -54,6 +56,7 @@ export function AuthPanel({
     setOrganizations([]);
     onWorkspaceIdChange('');
     onOrganizationNameChange('');
+    onOrganizationChange();
 
     const orgsResult = await getOrganizations(apiToken);
     addApiLog({ curlCommand: orgsResult.curlCommand, logs: orgsResult.logs });
@@ -88,6 +91,7 @@ export function AuthPanel({
       onOrganizationNameChange(org.name);
       onConnectionChange(true);
       setTestResult({ success: true, message: `Connected to ${org.name}` });
+      onOrganizationChange();
     }
   };
 

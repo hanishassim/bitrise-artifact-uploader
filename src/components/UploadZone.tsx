@@ -239,7 +239,7 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
                 )} />
               </div>
               <p className="mt-4 text-center font-medium text-foreground">
-                {isConnected ? (selectedApp ? `Drop artifact for ${selectedApp.app_name}`: 'Select an app to continue') : 'Connect to Bitrise first'}
+                {isConnected ? (selectedApp ? `Drop artifact for ${selectedApp.app_name}` : 'Select an app to continue') : 'Connect to Bitrise first'}
               </p>
               <p className="mt-1 text-center text-sm text-muted-foreground">
                 {isConnected ? (selectedApp ? `or click to browse • ${selectedApp.platform === 'ios' ? 'IPA supported' : 'APK, AAB supported'}` : 'Choose an app from the list above to enable uploads') : 'Connect and choose an app to enable uploads'}
@@ -347,9 +347,15 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
                       <p className="mb-2 text-sm font-medium text-muted-foreground">Copy and share the link</p>
                       <div className="flex items-center gap-2">
                         <div className="min-w-0 flex-1 rounded-lg border border-border/50 bg-background px-3 py-2">
-                          <p className="truncate text-sm text-primary break-all">
-                            {artifactStatus.public_install_page_url}
-                          </p>
+                          <a
+                            href={artifactStatus.public_install_page_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <p className="text-sm text-primary break-all">
+                              {artifactStatus.public_install_page_url}
+                            </p>
+                          </a>
                         </div>
                         <Button variant="outline" size="icon" onClick={handleCopyLink} className="flex-shrink-0">
                           {copied ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}

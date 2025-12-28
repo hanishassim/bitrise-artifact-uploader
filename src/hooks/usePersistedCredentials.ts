@@ -6,12 +6,14 @@ interface StoredCredentials {
   apiToken: string;
   appId: string;
   workspaceId: string;
+  organizationName: string;
 }
 
 export function usePersistedCredentials() {
   const [apiToken, setApiToken] = useState('');
   const [appId, setAppId] = useState('');
   const [workspaceId, setWorkspaceId] = useState('');
+  const [organizationName, setOrganizationName] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -22,10 +24,12 @@ export function usePersistedCredentials() {
           apiToken: storedToken,
           appId: storedAppId,
           workspaceId: storedWorkspaceId,
+          organizationName: storedOrganizationName,
         } = JSON.parse(stored) as StoredCredentials;
         setApiToken(storedToken || '');
         setAppId(storedAppId || '');
         setWorkspaceId(storedWorkspaceId || '');
+        setOrganizationName(storedOrganizationName || '');
       } catch {
         // Invalid stored data, ignore
       }
@@ -54,10 +58,18 @@ export function usePersistedCredentials() {
     localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ ...current, workspaceId: value }));
   }, []);
 
+  const updateOrganizationName = useCallback((value: string) => {
+    setOrganizationName(value);
+    const stored = localStorage.getItem(CREDENTIALS_KEY);
+    const current = stored ? JSON.parse(stored) : {};
+    localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ ...current, organizationName: value }));
+  }, []);
+
   const clearCredentials = useCallback(() => {
     setApiToken('');
     setAppId('');
     setWorkspaceId('');
+    setOrganizationName('');
     localStorage.removeItem(CREDENTIALS_KEY);
   }, []);
 
@@ -65,10 +77,12 @@ export function usePersistedCredentials() {
     apiToken,
     appId,
     workspaceId,
+    organizationName,
     isLoaded,
     setApiToken: updateApiToken,
     setAppId: updateAppId,
     setWorkspaceId: updateWorkspaceId,
+    setOrganizationName: updateOrganizationName,
     clearCredentials,
   };
 }

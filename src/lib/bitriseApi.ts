@@ -1,5 +1,41 @@
 import { supabase } from "@/integrations/supabase/client";
 
+export interface Organization {
+  name: string;
+  slug: string;
+}
+
+export async function getOrganizations(
+  apiToken: string
+): Promise<{ success: boolean; data?: Organization[]; error?: string; curlCommand?: string; logs?: string[] }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
+      body: { action: 'getOrganizations', apiToken }
+    });
+
+    if (error) {
+      return { success: false, error: 'Network error. Please check your connection.' };
+    }
+
+    const { status, curlCommand, logs } = data;
+
+    if (status === 200) {
+      const organizations: Organization[] = data.data?.data || [];
+      return { success: true, data: organizations, curlCommand, logs };
+    }
+
+    if (status === 401) {
+      return { success: false, error: 'Invalid or expired API token', curlCommand, logs };
+    }
+
+    const errorMessage = data.error || data.data?.error || 'An unknown error occurred';
+    return { success: false, error: errorMessage, curlCommand, logs };
+
+  } catch (error) {
+    return { success: false, error: 'Network error. Please check your connection.' };
+  }
+}
+
 export interface UploadProgress {
   loaded: number;
   total: number;
@@ -46,11 +82,11 @@ function generateUUID(): string {
 
 export async function listConnectedApps(
   apiToken: string,
-  workspaceId: string
+  orgSlug: string
 ): Promise<{ success: boolean; data?: ConnectedApp[]; error?: string; curlCommand?: string; logs?: string[] }> {
   try {
     const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
-      body: { action: 'listConnectedApps', apiToken, workspaceId }
+      body: { action: 'listConnectedApps', apiToken, orgSlug }
     });
 
     if (error) {
@@ -90,12 +126,11 @@ export async function listConnectedApps(
 }
 
 export async function testConnection(
-  apiToken: string,
-  workspaceId: string
+  apiToken: string
 ): Promise<{ success: boolean; message: string; curlCommand?: string; logs?: string[] }> {
   try {
     const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
-      body: { action: 'listConnectedApps', apiToken, workspaceId }
+      body: { action: 'testConnection', apiToken }
     });
 
     if (error) {

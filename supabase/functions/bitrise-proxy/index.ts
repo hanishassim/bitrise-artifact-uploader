@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
   try {
     logs.push('Parsing request body...');
     const body = await req.json();
-    const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes, whatsNew, withPublicPage } = body;
+    const { action, apiToken, appId, orgSlug, artifactId, fileName, fileSizeBytes, whatsNew, withPublicPage } = body;
     logs.push(`Action: ${action}`);
 
     if (!apiToken) {
@@ -49,16 +49,9 @@ Deno.serve(async (req: Request) => {
     };
 
     switch (action) {
-      case 'listConnectedApps': {
-        logs.push('Action: listConnectedApps');
-        if (!workspaceId) {
-          logs.push('Error: Missing workspaceId');
-          return new Response(
-            JSON.stringify({ error: 'Missing workspaceId', logs }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        url = `${RM_API_HOST}/release-management/v1/connected-apps?workspace_slug=${workspaceId}&items_per_page=50&page=1`;
+      case 'getOrganizations': {
+        logs.push('Action: getOrganizations');
+        url = `${RM_API_HOST}/v0.1/organizations`;
         const headers = { 'Authorization': apiToken };
         curlCommand = generateCurlCommand(url, 'GET', headers);
         logs.push(curlCommand);
@@ -67,16 +60,27 @@ Deno.serve(async (req: Request) => {
         break;
       }
 
+      case 'listConnectedApps': {
+        logs.push('Action: listConnectedApps');
+        if (!orgSlug) {
+            logs.push('Error: Missing orgSlug');
+            return new Response(
+                JSON.stringify({ error: 'Missing orgSlug', logs }),
+                { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+            );
+        }
+        url = `${RM_API_HOST}/v0.1/organizations/${orgSlug}/apps`;
+        const headers = { 'Authorization': apiToken };
+        curlCommand = generateCurlCommand(url, 'GET', headers);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'GET', headers });
+        logs.push(`Bitrise API response status: ${response.status}`);
+        break;
+    }
+
       case 'testConnection': {
         logs.push('Action: testConnection');
-        if (!appId) {
-          logs.push('Error: Missing appId');
-          return new Response(
-            JSON.stringify({ error: 'Missing appId', logs }),
-            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-          );
-        }
-        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}`;
+        url = `${RM_API_HOST}/v0.1/me`;
         const headers = { 'Authorization': apiToken };
         curlCommand = generateCurlCommand(url, 'GET', headers);
         logs.push(curlCommand);

@@ -1,10 +1,12 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { History, Trash2, FileUp, CheckCircle, XCircle } from 'lucide-react';
+import { History, Trash2, FileUp, CheckCircle, XCircle, Link } from 'lucide-react';
 import { UploadRecord } from '@/hooks/useUploadHistory';
 import { formatFileSize } from '@/lib/fileHash';
+import { AnimatePresence, motion } from 'framer-motion';
 
 interface UploadHistoryProps {
   history: UploadRecord[];
@@ -12,6 +14,8 @@ interface UploadHistoryProps {
 }
 
 export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, {
@@ -63,12 +67,13 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
             <p className="mt-3 text-sm text-muted-foreground">No uploads yet</p>
           </div>
         ) : (
-          <ScrollArea className="h-[300px] pr-4">
+          <ScrollArea className="h-auto max-h-[400px] pr-4">
             <div className="space-y-3">
               {history.map((record) => (
                 <div
                   key={record.id}
-                  className="group rounded-lg border border-border/50 bg-background/50 p-3 transition-colors hover:bg-muted/50"
+                  className="group rounded-lg border border-border/50 bg-background/50 p-3 transition-colors hover:bg-muted/50 cursor-pointer"
+                  onClick={() => setExpandedId(expandedId === record.id ? null : record.id)}
                 >
                   <div className="flex items-start gap-3">
                     <div className="mt-0.5">
@@ -95,6 +100,27 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
                       </p>
                     </div>
                   </div>
+                  <AnimatePresence>
+                    {expandedId === record.id && record.publicInstallPageUrl && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                        animate={{ opacity: 1, height: 'auto', marginTop: '12px' }}
+                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <a
+                          href={record.publicInstallPageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm text-primary transition-colors hover:bg-primary/20"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Link className="h-4 w-4" />
+                          <span>Public Install Page</span>
+                        </a>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               ))}
             </div>

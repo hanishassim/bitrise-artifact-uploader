@@ -9,7 +9,8 @@ import { listConnectedApps, ConnectedApp } from '@/lib/bitriseApi';
 
 interface AppSelectorProps {
   apiToken: string;
-  workspaceId: string;
+  orgSlug: string;
+  organizationName: string;
   isConnected: boolean;
   selectedAppId: string | null;
   lastUsedAppId: string | null;
@@ -22,7 +23,8 @@ const APP_ITEM_HEIGHT = 76; // 64px item + 8px gap + 4px padding adjustment
 
 export function AppSelector({
   apiToken,
-  workspaceId,
+  orgSlug,
+  organizationName,
   isConnected,
   selectedAppId,
   lastUsedAppId,
@@ -36,12 +38,12 @@ export function AppSelector({
   const [platformFilter, setPlatformFilter] = useState<'all' | 'ios' | 'android'>('all');
 
   const fetchApps = useCallback(async () => {
-    if (!isConnected || !apiToken || !workspaceId) return;
+    if (!isConnected || !apiToken || !orgSlug) return;
 
     setIsLoading(true);
     setError(null);
 
-    const result = await listConnectedApps(apiToken, workspaceId);
+    const result = await listConnectedApps(apiToken, orgSlug);
 
     addApiLog({
       curlCommand: result.curlCommand,
@@ -55,7 +57,7 @@ export function AppSelector({
     }
 
     setIsLoading(false);
-  }, [isConnected, apiToken, workspaceId, addApiLog]);
+  }, [isConnected, apiToken, orgSlug, addApiLog]);
 
   useEffect(() => {
     fetchApps();
@@ -102,7 +104,7 @@ export function AppSelector({
     <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Select App</CardTitle>
+          <CardTitle className="text-lg">Select App for {organizationName}</CardTitle>
           <Button 
             variant="ghost" 
             size="icon"

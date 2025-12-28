@@ -238,7 +238,7 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
                 )} />
               </div>
               <p className="mt-4 text-center font-medium text-foreground">
-                {isConnected ? 'Drop your artifact here' : 'Connect to Bitrise first'}
+                {isConnected ? `Drop your artifact here for ${selectedApp?.app_name || 'the selected app'}` : 'Connect to Bitrise first'}
               </p>
               <p className="mt-1 text-center text-sm text-muted-foreground">
                 {isConnected ? 'or click to browse • IPA, APK, AAB supported' : 'Test your connection above to enable uploads'}

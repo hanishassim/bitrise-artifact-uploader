@@ -138,7 +138,7 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
                         animate={{ opacity: 1, height: 'auto', marginTop: '12px' }}
                         exit={{ opacity: 0, height: 0, marginTop: 0 }}
                         transition={{ duration: 0.2 }}
-                        className="space-y-4 rounded-lg border border-border/50 bg-muted/30 p-4"
+                        className="space-y-4 rounded-lg border border-border/50 bg-muted/30 p-4 overflow-hidden"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div>

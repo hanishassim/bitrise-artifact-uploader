@@ -150,7 +150,7 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
                               rel="noopener noreferrer"
                               className="min-w-0 flex-1 rounded-lg border border-border/50 bg-background px-3 py-2"
                             >
-                              <p className="truncate text-sm text-primary break-all">
+                              <p className="text-sm text-primary break-all">
                                 {record.publicInstallPageUrl}
                               </p>
                             </a>

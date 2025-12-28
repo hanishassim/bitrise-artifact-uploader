@@ -50,6 +50,36 @@ Before starting the development server, you need to set up your environment vari
     VITE_SUPABASE_URL="https://your-project-id.supabase.co"
     ```
 
+## Deploying Supabase Edge Functions
+
+This project requires the `bitrise-proxy` Edge Function to be deployed to your Supabase project to handle Bitrise API requests securely.
+
+1.  **Install the Supabase CLI:**
+
+    ```sh
+    npm i supabase --save-dev
+    ```
+
+2.  **Link your Supabase project:** Replace `<PROJECT_ID>` with your actual Supabase project ID.
+
+    ```sh
+    npx supabase link --project-ref <PROJECT_ID>
+    ```
+
+3.  **Set your Supabase access token:** You will need to provide a `SUPABASE_ACCESS_TOKEN` with `owner` or `admin` permissions for the CLI to deploy the function.
+
+    ```sh
+    export SUPABASE_ACCESS_TOKEN=<YOUR_ACCESS_TOKEN>
+    ```
+
+4.  **Deploy the Edge Function:**
+
+    ```sh
+    npx supabase functions deploy --no-verify-jwt bitrise-proxy
+    ```
+
+After completing these steps, the `bitrise-proxy` function will be ready to handle API requests.
+
 ## Technologies Used
 
 This project is built with:

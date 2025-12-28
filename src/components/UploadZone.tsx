@@ -126,6 +126,7 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
           fileSize: selectedFile.size,
           status: 'success',
           sha256Hash: fileHash,
+          publicInstallPageUrl: result.artifactStatus?.public_install_page_url,
         });
       } else {
         setUploadState('error');

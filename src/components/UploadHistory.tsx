@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { History, Trash2, FileUp, CheckCircle, XCircle, Copy, Check } from 'lucide-react';
+import { History, Trash2, FileUp, CheckCircle, XCircle, Copy, Check, ChevronDown } from 'lucide-react';
 import { UploadRecord } from '@/hooks/useUploadHistory';
 import { formatFileSize } from '@/lib/fileHash';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -108,11 +108,18 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="truncate text-sm font-medium">{record.fileName}</p>
-                        <Badge variant={getFileTypeBadgeVariant(record.fileType)} className="text-xs uppercase">
-                          {record.fileType}
-                        </Badge>
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex items-center gap-2">
+                          <p className="truncate text-sm font-medium">{record.fileName}</p>
+                          <Badge variant={getFileTypeBadgeVariant(record.fileType)} className="text-xs uppercase">
+                            {record.fileType}
+                          </Badge>
+                        </div>
+                        {record.publicInstallPageUrl && (
+                          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${
+                            expandedId === record.id ? 'rotate-180' : ''
+                          }`} />
+                        )}
                       </div>
                       <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
                         <span>{formatFileSize(record.fileSize)}</span>

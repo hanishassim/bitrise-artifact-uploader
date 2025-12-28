@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Smartphone, Apple, Check, AlertCircle, RefreshCw } from 'lucide-react';
-import { listConnectedApps, getOrganizations, ConnectedApp } from '@/lib/bitriseApi';
+import { listConnectedApps, ConnectedApp } from '@/lib/bitriseApi';
 
 interface AppSelectorProps {
   apiToken: string;
   workspaceId: string;
+  organizationName: string;
   isConnected: boolean;
   selectedAppId: string | null;
   lastUsedAppId: string | null;
@@ -17,12 +18,10 @@ interface AppSelectorProps {
   addApiLog: (log: { curlCommand?: string; logs?: string[] }) => void;
 }
 
-// Height for a single app item (including gap)
-const APP_ITEM_HEIGHT = 76; // 64px item + 8px gap + 4px padding adjustment
-
 export function AppSelector({
   apiToken,
   workspaceId,
+  organizationName,
   isConnected,
   selectedAppId,
   lastUsedAppId,
@@ -30,7 +29,6 @@ export function AppSelector({
   addApiLog,
 }: AppSelectorProps) {
   const [apps, setApps] = useState<ConnectedApp[]>([]);
-  const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -41,40 +39,33 @@ export function AppSelector({
 
     setIsLoading(true);
     setError(null);
-    setOrganizationName(null);
 
-    const [appsResult, orgsResult] = await Promise.all([
-      listConnectedApps(apiToken, workspaceId),
-      getOrganizations(apiToken)
-    ]);
+    const result = await listConnectedApps(apiToken, workspaceId);
 
     addApiLog({
-      curlCommand: appsResult.curlCommand,
-      logs: appsResult.logs,
-    });
-    addApiLog({
-      curlCommand: orgsResult.curlCommand,
-      logs: orgsResult.logs,
+      curlCommand: result.curlCommand,
+      logs: result.logs,
     });
 
-    if (appsResult.success && appsResult.data) {
-      setApps(appsResult.data);
+    if (result.success && result.data) {
+      setApps(result.data);
     } else {
-      setError(appsResult.error || 'Failed to load apps');
+      setError(result.error || 'Failed to load apps');
     }
-
-    if (orgsResult.success && orgsResult.data && orgsResult.data.length > 0) {
-      // Assuming the user belongs to one organization for this tool's purpose
-      setOrganizationName(orgsResult.data[0].name);
-    }
-    // Not setting an error for orgs failing, as it's not critical
 
     setIsLoading(false);
   }, [isConnected, apiToken, workspaceId, addApiLog]);
 
   useEffect(() => {
-    fetchApps();
-  }, [fetchApps]);
+    // Reset apps when connection status changes
+    if (!isConnected) {
+      setApps([]);
+      setError(null);
+      setSearchQuery('');
+    } else {
+      fetchApps();
+    }
+  }, [isConnected, fetchApps]);
 
 
   const filteredApps = useMemo(() => {

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Search, Smartphone, Apple, Check, AlertCircle, RefreshCw } from 'lucide-react';
-import { listConnectedApps, ConnectedApp } from '@/lib/bitriseApi';
+import { listConnectedApps, getOrganizations, ConnectedApp } from '@/lib/bitriseApi';
 
 interface AppSelectorProps {
   apiToken: string;
@@ -30,6 +30,7 @@ export function AppSelector({
   addApiLog,
 }: AppSelectorProps) {
   const [apps, setApps] = useState<ConnectedApp[]>([]);
+  const [organizationName, setOrganizationName] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -40,19 +41,33 @@ export function AppSelector({
 
     setIsLoading(true);
     setError(null);
+    setOrganizationName(null);
 
-    const result = await listConnectedApps(apiToken, workspaceId);
+    const [appsResult, orgsResult] = await Promise.all([
+      listConnectedApps(apiToken, workspaceId),
+      getOrganizations(apiToken)
+    ]);
 
     addApiLog({
-      curlCommand: result.curlCommand,
-      logs: result.logs,
+      curlCommand: appsResult.curlCommand,
+      logs: appsResult.logs,
+    });
+    addApiLog({
+      curlCommand: orgsResult.curlCommand,
+      logs: orgsResult.logs,
     });
 
-    if (result.success && result.data) {
-      setApps(result.data);
+    if (appsResult.success && appsResult.data) {
+      setApps(appsResult.data);
     } else {
-      setError(result.error || 'Failed to load apps');
+      setError(appsResult.error || 'Failed to load apps');
     }
+
+    if (orgsResult.success && orgsResult.data && orgsResult.data.length > 0) {
+      // Assuming the user belongs to one organization for this tool's purpose
+      setOrganizationName(orgsResult.data[0].name);
+    }
+    // Not setting an error for orgs failing, as it's not critical
 
     setIsLoading(false);
   }, [isConnected, apiToken, workspaceId, addApiLog]);
@@ -60,6 +75,7 @@ export function AppSelector({
   useEffect(() => {
     fetchApps();
   }, [fetchApps]);
+
 
   const filteredApps = useMemo(() => {
     return apps.filter(app => {
@@ -102,7 +118,9 @@ export function AppSelector({
     <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Select App</CardTitle>
+          <CardTitle className="text-lg">
+            Select App {organizationName && <span className="text-muted-foreground">for {organizationName}</span>}
+          </CardTitle>
           <Button 
             variant="ghost" 
             size="icon"

@@ -1,12 +1,14 @@
 import { useState } from 'react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { History, Trash2, FileUp, CheckCircle, XCircle, Link } from 'lucide-react';
+import { History, Trash2, FileUp, CheckCircle, XCircle, Copy, Check } from 'lucide-react';
 import { UploadRecord } from '@/hooks/useUploadHistory';
 import { formatFileSize } from '@/lib/fileHash';
 import { AnimatePresence, motion } from 'framer-motion';
+import { toast } from '@/hooks/use-toast';
 
 interface UploadHistoryProps {
   history: UploadRecord[];
@@ -15,6 +17,28 @@ interface UploadHistoryProps {
 
 export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  const handleCopyLink = async (record: UploadRecord) => {
+    const url = record.publicInstallPageUrl;
+    if (!url) return;
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedId(record.id);
+      toast({
+        title: 'Link copied!',
+        description: 'Install page URL copied to clipboard',
+      });
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      toast({
+        title: 'Copy failed',
+        description: 'Please copy the link manually',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -107,17 +131,38 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
                         animate={{ opacity: 1, height: 'auto', marginTop: '12px' }}
                         exit={{ opacity: 0, height: 0, marginTop: 0 }}
                         transition={{ duration: 0.2 }}
+                        className="space-y-4 rounded-lg border border-border/50 bg-muted/30 p-4"
+                        onClick={(e) => e.stopPropagation()}
                       >
-                        <a
-                          href={record.publicInstallPageUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 rounded-md bg-primary/10 px-3 py-2 text-sm text-primary transition-colors hover:bg-primary/20"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <Link className="h-4 w-4" />
-                          <span>Public Install Page</span>
-                        </a>
+                        <div>
+                          <p className="mb-2 text-sm font-medium text-muted-foreground">Copy and share the link</p>
+                          <div className="flex items-center gap-2">
+                            <a
+                              href={record.publicInstallPageUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="min-w-0 flex-1 rounded-lg border border-border/50 bg-background px-3 py-2"
+                            >
+                              <p className="truncate text-sm text-primary break-all">
+                                {record.publicInstallPageUrl}
+                              </p>
+                            </a>
+                            <Button
+                              variant="outline"
+                              size="icon"
+                              onClick={() => handleCopyLink(record)}
+                              className="flex-shrink-0"
+                            >
+                              {copiedId === record.id ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <p className="mb-2 text-sm font-medium text-muted-foreground">Scan this QR code on your device</p>
+                          <div className="inline-block rounded-lg bg-white p-2">
+                            <QRCodeSVG value={record.publicInstallPageUrl} size={128} />
+                          </div>
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>

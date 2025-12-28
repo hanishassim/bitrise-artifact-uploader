@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Search, Smartphone, Apple, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { Search, Smartphone, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { FaApple, FaAndroid } from "react-icons/fa";
 import { listConnectedApps, ConnectedApp } from '@/lib/bitriseApi';
 
 interface AppSelectorProps {
@@ -81,7 +82,7 @@ export function AppSelector({
         if (platformFilter === 'ios' && app.platform !== 'ios') return false;
         if (platformFilter === 'android' && app.platform !== 'android') return false;
       }
-      
+
       // Search filter
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -90,7 +91,7 @@ export function AppSelector({
           app.project_title?.toLowerCase().includes(query)
         );
       }
-      
+
       return true;
     });
   }, [apps, platformFilter, searchQuery]);
@@ -118,8 +119,8 @@ export function AppSelector({
           <CardTitle className="text-lg">
             Select App {organizationName && <span className="text-muted-foreground">for {organizationName}</span>}
           </CardTitle>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="icon"
             onClick={fetchApps}
             disabled={isLoading}
@@ -155,7 +156,7 @@ export function AppSelector({
               onClick={() => setPlatformFilter('ios')}
               title="iOS apps"
             >
-              <Apple className="h-4 w-4" />
+              <FaApple className="h-4 w-4" />
             </Button>
             <Button
               variant={platformFilter === 'android' ? 'default' : 'outline'}
@@ -163,7 +164,7 @@ export function AppSelector({
               onClick={() => setPlatformFilter('android')}
               title="Android apps"
             >
-              <Smartphone className="h-4 w-4" />
+              <FaAndroid className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -202,8 +203,8 @@ export function AppSelector({
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <Smartphone className="h-8 w-8 text-muted-foreground/50 mb-2" />
                   <p className="text-sm text-muted-foreground">
-                    {searchQuery || platformFilter !== 'all' 
-                      ? 'No apps match your filter' 
+                    {searchQuery || platformFilter !== 'all'
+                      ? 'No apps match your filter'
                       : 'No connected apps found'}
                   </p>
                 </div>
@@ -212,37 +213,35 @@ export function AppSelector({
                   <button
                     key={app.id}
                     onClick={() => onAppSelect(app)}
-                    className={`w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all hover:bg-accent/50 ${
-                      selectedAppId === app.id 
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary' 
-                        : 'border-border/50 bg-muted/30 hover:border-primary/50'
-                    }`}
+                    className={`w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all hover:bg-accent/50 ${selectedAppId === app.id
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      : 'border-border/50 bg-muted/30 hover:border-primary/50'
+                      }`}
                   >
                     {/* App Icon */}
-                    <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
+                    <div className="relative h-10 w-10 flex-shrink-0 overflow rounded-lg bg-muted">
                       {app.icon_url ? (
-                        <img 
-                          src={app.icon_url} 
-                          alt={app.app_name || 'App icon'} 
+                        <img
+                          src={app.icon_url}
+                          alt={app.app_name || 'App icon'}
                           className="h-full w-full object-cover"
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center">
                           {app.platform === 'ios' ? (
-                            <Apple className="h-5 w-5 text-muted-foreground" />
+                            <FaApple className="h-5 w-5 text-muted-foreground" />
                           ) : (
-                            <Smartphone className="h-5 w-5 text-muted-foreground" />
+                            <FaAndroid className="h-5 w-5 text-muted-foreground" />
                           )}
                         </div>
                       )}
                       {/* Platform badge */}
-                      <div className={`absolute -bottom-1 -right-1 rounded-full p-0.5 ${
-                        app.platform === 'ios' ? 'bg-muted-foreground' : 'bg-primary'
-                      }`}>
+                      <div className={`absolute -bottom-1 -right-1 rounded-full p-0.5 ${app.platform === 'ios' ? 'bg-muted-foreground' : 'bg-primary'
+                        }`}>
                         {app.platform === 'ios' ? (
-                          <Apple className="h-2.5 w-2.5 text-primary-foreground" />
+                          <FaApple className="h-3 w-3 text-primary-foreground" />
                         ) : (
-                          <Smartphone className="h-2.5 w-2.5 text-primary-foreground" />
+                          <FaAndroid className="h-3 w-3 text-primary-foreground" />
                         )}
                       </div>
                     </div>

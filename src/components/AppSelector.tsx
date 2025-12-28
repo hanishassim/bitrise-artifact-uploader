@@ -82,12 +82,6 @@ export function AppSelector({
     });
   }, [apps, platformFilter, searchQuery]);
 
-  // Calculate dynamic height based on number of apps
-  const listHeight = useMemo(() => {
-    if (filteredApps.length === 0) return 120; // Empty state height
-    // Adjust height to fit all available apps
-    return filteredApps.length * APP_ITEM_HEIGHT + 8; // Add some padding
-  }, [filteredApps.length]);
 
   if (!isConnected) {
     return (
@@ -187,7 +181,7 @@ export function AppSelector({
 
         {/* Apps List */}
         {!isLoading && !error && (
-          <ScrollArea style={{ height: listHeight }} className="pr-2">
+          <ScrollArea className="h-auto max-h-96 pr-2">
             <div className="space-y-2">
               {filteredApps.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -244,11 +238,6 @@ export function AppSelector({
                         <p className="text-sm font-medium truncate text-foreground">
                           {app.app_name || 'Unnamed App'}
                         </p>
-                        {app.id === lastUsedAppId && (
-                          <span className="flex-shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary">
-                            Last used
-                          </span>
-                        )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
                         {app.project_title}

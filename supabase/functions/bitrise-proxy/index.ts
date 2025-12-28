@@ -140,9 +140,9 @@ Deno.serve(async (req: Request) => {
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/what-to-test`;
         const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
         const payload = JSON.stringify({ what_to_test: whatsNew });
-        curlCommand = generateCurlCommand(url, 'PUT', headers, payload);
+        curlCommand = generateCurlCommand(url, 'PATCH', headers, payload);
         logs.push(curlCommand);
-        response = await fetch(url, { method: 'PUT', headers, body: payload });
+        response = await fetch(url, { method: 'PATCH', headers, body: payload });
         logs.push(`Bitrise API response status: ${response.status}`);
         break;
       }
@@ -160,9 +160,9 @@ Deno.serve(async (req: Request) => {
         url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/public-install-page`;
         const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
         const payload = JSON.stringify({ with_public_page: withPublicPage ?? true });
-        curlCommand = generateCurlCommand(url, 'PUT', headers, payload);
+        curlCommand = generateCurlCommand(url, 'PATCH', headers, payload);
         logs.push(curlCommand);
-        response = await fetch(url, { method: 'PUT', headers, body: payload });
+        response = await fetch(url, { method: 'PATCH', headers, body: payload });
         logs.push(`Bitrise API response status: ${response.status}`);
         break;
       }

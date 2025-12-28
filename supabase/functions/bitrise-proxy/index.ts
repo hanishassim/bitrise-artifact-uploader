@@ -24,7 +24,7 @@ Deno.serve(async (req: Request) => {
   try {
     logs.push('Parsing request body...');
     const body = await req.json();
-    const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes, whatsNew } = body;
+    const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes, whatsNew, withPublicPage } = body;
     logs.push(`Action: ${action}`);
 
     if (!apiToken) {
@@ -84,16 +84,18 @@ Deno.serve(async (req: Request) => {
         logs.push(`Bitrise API response status: ${response.status}`);
         break;
       }
+
       case 'getUploadUrl': {
         logs.push('Action: getUploadUrl');
-        if (!appId || !fileName || !fileSizeBytes) {
+        if (!appId || !artifactId || !fileName || !fileSizeBytes) {
           logs.push('Error: Missing required parameters for getUploadUrl');
           return new Response(
-            JSON.stringify({ error: 'Missing appId, fileName, or fileSizeBytes', logs }),
+            JSON.stringify({ error: 'Missing appId, artifactId, fileName, or fileSizeBytes', logs }),
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/upload-url`;
+        // Updated endpoint: /connected-apps/{connected_app_id}/installable-artifacts/{installable_artifact_id}/upload-url
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/upload-url`;
         const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
         const payload = JSON.stringify({ file_name: fileName, file_size_bytes: fileSizeBytes });
         curlCommand = generateCurlCommand(url, 'POST', headers, payload);
@@ -112,7 +114,8 @@ Deno.serve(async (req: Request) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/artifacts/${artifactId}`;
+        // Updated endpoint: /connected-apps/{connected_app_id}/installable-artifacts/{installable_artifact_id}/status
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/status`;
         const headers = { 'Authorization': apiToken };
         curlCommand = generateCurlCommand(url, 'GET', headers);
         logs.push(curlCommand);
@@ -130,12 +133,13 @@ Deno.serve(async (req: Request) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/artifacts/${artifactId}/whats-new`;
+        // Updated endpoint: /connected-apps/{connected_app_id}/installable-artifacts/{installable_artifact_id}/what-to-test
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/what-to-test`;
         const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
-        const payload = JSON.stringify({ whats_new_text: whatsNew });
-        curlCommand = generateCurlCommand(url, 'POST', headers, payload);
+        const payload = JSON.stringify({ what_to_test: whatsNew });
+        curlCommand = generateCurlCommand(url, 'PUT', headers, payload);
         logs.push(curlCommand);
-        response = await fetch(url, { method: 'POST', headers, body: payload });
+        response = await fetch(url, { method: 'PUT', headers, body: payload });
         logs.push(`Bitrise API response status: ${response.status}`);
         break;
       }
@@ -149,15 +153,36 @@ Deno.serve(async (req: Request) => {
             { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
-        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/artifacts/${artifactId}/public-page`;
+        // Updated endpoint: /connected-apps/{connected_app_id}/installable-artifacts/{installable_artifact_id}/public-install-page
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/public-install-page`;
         const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
-        const payload = JSON.stringify({ public_install_page_enabled: true });
-        curlCommand = generateCurlCommand(url, 'POST', headers, payload);
+        const payload = JSON.stringify({ with_public_page: withPublicPage ?? true });
+        curlCommand = generateCurlCommand(url, 'PUT', headers, payload);
         logs.push(curlCommand);
-        response = await fetch(url, { method: 'POST', headers, body: payload });
+        response = await fetch(url, { method: 'PUT', headers, body: payload });
         logs.push(`Bitrise API response status: ${response.status}`);
         break;
       }
+
+      case 'getInstallableArtifacts': {
+        logs.push('Action: getInstallableArtifacts');
+        if (!appId) {
+          logs.push('Error: Missing appId');
+          return new Response(
+            JSON.stringify({ error: 'Missing appId', logs }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        // Endpoint: /connected-apps/{connected_app_id}/installable-artifacts
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts?items_per_page=50&page=1`;
+        const headers = { 'Authorization': apiToken };
+        curlCommand = generateCurlCommand(url, 'GET', headers);
+        logs.push(curlCommand);
+        response = await fetch(url, { method: 'GET', headers });
+        logs.push(`Bitrise API response status: ${response.status}`);
+        break;
+      }
+
       default:
         logs.push(`Error: Invalid action - ${action}`);
         return new Response(

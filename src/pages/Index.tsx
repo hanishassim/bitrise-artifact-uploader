@@ -89,6 +89,7 @@ const Index = () => {
             <UploadZone
               apiToken={apiToken}
               appId={selectedApp?.id || appId}
+              selectedApp={selectedApp}
               isConnected={isConnected && !!(selectedApp?.id || appId)}
               onUploadComplete={addRecord}
               lastArtifact={lastArtifact}

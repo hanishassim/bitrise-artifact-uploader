@@ -17,6 +17,9 @@ interface AppSelectorProps {
   addApiLog: (log: { curlCommand?: string; logs?: string[] }) => void;
 }
 
+// Height for a single app item (including gap)
+const APP_ITEM_HEIGHT = 76; // 64px item + 8px gap + 4px padding adjustment
+
 export function AppSelector({
   apiToken,
   workspaceId,
@@ -90,9 +93,16 @@ export function AppSelector({
     });
   }, [filteredApps, lastUsedAppId]);
 
+  // Calculate dynamic height based on number of apps (max 3 visible)
+  const listHeight = useMemo(() => {
+    const visibleApps = Math.min(sortedApps.length, 3);
+    if (visibleApps === 0) return 120; // Empty state height
+    return visibleApps * APP_ITEM_HEIGHT + 8; // Add some padding
+  }, [sortedApps.length]);
+
   if (!isConnected) {
     return (
-      <Card className="border-dashed">
+      <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
         <CardContent className="py-8">
           <div className="flex flex-col items-center justify-center text-center">
             <Smartphone className="h-12 w-12 text-muted-foreground/50 mb-3" />
@@ -106,7 +116,7 @@ export function AppSelector({
   }
 
   return (
-    <Card>
+    <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Select App</CardTitle>
@@ -129,7 +139,7 @@ export function AppSelector({
               placeholder="Search apps..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9"
+              className="pl-9 bg-background/50"
             />
           </div>
           <div className="flex gap-1">
@@ -173,9 +183,9 @@ export function AppSelector({
 
         {/* Loading State */}
         {isLoading && (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-3 rounded-lg border p-3">
+              <div key={i} className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/30 p-3">
                 <Skeleton className="h-10 w-10 rounded-lg" />
                 <div className="flex-1 space-y-2">
                   <Skeleton className="h-4 w-32" />
@@ -188,7 +198,7 @@ export function AppSelector({
 
         {/* Apps List */}
         {!isLoading && !error && (
-          <ScrollArea className="h-[300px] pr-4">
+          <ScrollArea style={{ height: listHeight }} className="pr-2">
             <div className="space-y-2">
               {sortedApps.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -207,7 +217,7 @@ export function AppSelector({
                     className={`w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all hover:bg-accent/50 ${
                       selectedAppId === app.id 
                         ? 'border-primary bg-primary/5 ring-1 ring-primary' 
-                        : 'hover:border-primary/50'
+                        : 'border-border/50 bg-muted/30 hover:border-primary/50'
                     }`}
                   >
                     {/* App Icon */}
@@ -229,12 +239,12 @@ export function AppSelector({
                       )}
                       {/* Platform badge */}
                       <div className={`absolute -bottom-1 -right-1 rounded-full p-0.5 ${
-                        app.platform === 'ios' ? 'bg-gray-800' : 'bg-green-600'
+                        app.platform === 'ios' ? 'bg-muted-foreground' : 'bg-primary'
                       }`}>
                         {app.platform === 'ios' ? (
-                          <Apple className="h-2.5 w-2.5 text-white" />
+                          <Apple className="h-2.5 w-2.5 text-primary-foreground" />
                         ) : (
-                          <Smartphone className="h-2.5 w-2.5 text-white" />
+                          <Smartphone className="h-2.5 w-2.5 text-primary-foreground" />
                         )}
                       </div>
                     </div>
@@ -242,7 +252,7 @@ export function AppSelector({
                     {/* App Info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <p className="text-sm font-medium truncate">
+                        <p className="text-sm font-medium truncate text-foreground">
                           {app.app_name || 'Unnamed App'}
                         </p>
                         {app.id === lastUsedAppId && (

@@ -7,14 +7,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Upload, FileUp, X, CheckCircle, XCircle, Loader2, Shield, RotateCcw, Copy, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { calculateSHA256, formatFileSize, isValidArtifactFile, getFileExtension } from '@/lib/fileHash';
-import { uploadArtifact, submitWhatsNew, enablePublicInstallPage, UploadProgress, ArtifactStatus } from '@/lib/bitriseApi';
+import { uploadArtifact, submitWhatsNew, UploadProgress, ArtifactStatus } from '@/lib/bitriseApi';
 import { UploadRecord } from '@/hooks/useUploadHistory';
+import { ConnectedApp } from '@/lib/bitriseApi';
 import { LastArtifactInfo } from '@/hooks/useLastArtifact';
 import { toast } from '@/hooks/use-toast';
 
 interface UploadZoneProps {
   apiToken: string;
   appId: string;
+  selectedApp: ConnectedApp | null;
   isConnected: boolean;
   onUploadComplete: (record: Omit<UploadRecord, 'id' | 'uploadDate'>) => void;
   lastArtifact: LastArtifactInfo | null;
@@ -25,7 +27,7 @@ interface UploadZoneProps {
 
 type UploadState = 'idle' | 'hashing' | 'uploading' | 'success' | 'error';
 
-export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, lastArtifact, onFileSave, onClearLastArtifact, addApiLog }: UploadZoneProps) {
+export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUploadComplete, lastArtifact, onFileSave, onClearLastArtifact, addApiLog }: UploadZoneProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [fileHash, setFileHash] = useState<string>('');
@@ -95,10 +97,12 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
     setCopied(false);
 
     try {
+      const platform = selectedApp?.platform || 'ios';
       const result = await uploadArtifact(
         selectedFile,
         apiToken,
         appId,
+        platform,
         setProgress,
         controller,
         addApiLog
@@ -113,16 +117,8 @@ export function UploadZone({ apiToken, appId, isConnected, onUploadComplete, las
           addApiLog({ curlCommand: whatsNewResult.curlCommand, logs: whatsNewResult.logs });
         }
 
-        // Enable public install page and get the updated artifact status
-        const publicPageResult = await enablePublicInstallPage(apiToken, appId, result.artifactId);
-        addApiLog({ curlCommand: publicPageResult.curlCommand, logs: publicPageResult.logs });
-
-        if (publicPageResult.success) {
-          setArtifactStatus(publicPageResult.data || null);
-        } else {
-          // Handle case where enabling public page fails but upload was successful
-          setArtifactStatus(result.artifactStatus || null);
-        }
+        // Artifact status with public URL is already handled in checkArtifactStatus
+        setArtifactStatus(result.artifactStatus || null);
 
         onUploadComplete({
           fileName: selectedFile.name,

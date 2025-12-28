@@ -30,6 +30,13 @@ export interface ConnectedApp {
   icon_url?: string;
 }
 
+export interface InstallableArtifact {
+  id: string;
+  platform: 'ios' | 'android';
+  public_install_page_url?: string;
+  status: string;
+}
+
 function generateUUID(): string {
   const hex = Array.from(crypto.getRandomValues(new Uint8Array(16)))
     .map(b => b.toString(16).padStart(2, '0'))
@@ -57,6 +64,23 @@ export async function listConnectedApps(
       return { success: true, data: apps, curlCommand, logs };
     }
 
+    // Handle non-200 statuses
+    if (status === 400) {
+      return { success: false, error: 'Invalid request parameters', curlCommand, logs };
+    }
+    if (status === 401) {
+      return { success: false, error: 'Invalid or expired API token', curlCommand, logs };
+    }
+    if (status === 403) {
+      return { success: false, error: 'Access forbidden. Check your permissions.', curlCommand, logs };
+    }
+    if (status === 404) {
+      return { success: false, error: 'Workspace not found', curlCommand, logs };
+    }
+    if (status === 500) {
+      return { success: false, error: 'Bitrise server error. Please try again later.', curlCommand, logs };
+    }
+
     const errorMessage = data.error || data.data?.error || 'An unknown error occurred';
     return { success: false, error: errorMessage, curlCommand, logs };
 
@@ -82,6 +106,23 @@ export async function testConnection(
 
     if (status === 200) {
       return { success: true, message: 'Connection successful!', curlCommand, logs };
+    }
+
+    // Handle non-200 statuses
+    if (status === 400) {
+      return { success: false, message: 'Invalid request parameters', curlCommand, logs };
+    }
+    if (status === 401) {
+      return { success: false, message: 'Invalid or expired API token', curlCommand, logs };
+    }
+    if (status === 403) {
+      return { success: false, message: 'Access forbidden. Check your permissions.', curlCommand, logs };
+    }
+    if (status === 404) {
+      return { success: false, message: 'Workspace not found', curlCommand, logs };
+    }
+    if (status === 500) {
+      return { success: false, message: 'Bitrise server error. Please try again later.', curlCommand, logs };
     }
 
     const errorMessage = data.error || data.data?.error || 'Connection failed';
@@ -114,13 +155,30 @@ async function getUploadUrl(
       return { success: false, error: 'Network error while getting upload URL' };
     }
 
-    const { curlCommand, logs } = data;
+    const { status, curlCommand, logs } = data;
 
-    if (data.status === 200) {
+    if (status === 200) {
       return { success: true, data: data.data, curlCommand, logs };
-    } else {
-      return { success: false, error: data.data?.message || `Failed to get upload URL`, curlCommand, logs };
     }
+
+    // Handle non-200 statuses
+    if (status === 400) {
+      return { success: false, error: 'Invalid file parameters', curlCommand, logs };
+    }
+    if (status === 401) {
+      return { success: false, error: 'Invalid or expired API token', curlCommand, logs };
+    }
+    if (status === 403) {
+      return { success: false, error: 'Access forbidden. Check your permissions.', curlCommand, logs };
+    }
+    if (status === 404) {
+      return { success: false, error: 'Connected app or artifact not found', curlCommand, logs };
+    }
+    if (status === 500) {
+      return { success: false, error: 'Bitrise server error', curlCommand, logs };
+    }
+
+    return { success: false, error: data.data?.message || `Failed to get upload URL (${status})`, curlCommand, logs };
   } catch (error) {
     return { success: false, error: 'Network error while getting upload URL' };
   }
@@ -130,10 +188,12 @@ async function checkArtifactStatus(
   apiToken: string,
   appId: string,
   artifactId: string,
-  retryCount = 0
+  platform: 'ios' | 'android',
+  retryCount = 0,
+  addApiLog?: (log: { curlCommand?: string; logs?: string[] }) => void
 ): Promise<{ success: boolean; data?: ArtifactStatus; error?: string; curlCommand?: string; logs?: string[] }> {
-  if (retryCount >= 10) {
-    return { success: false, error: 'Artifact processing timed out after 10 retries' };
+  if (retryCount >= 15) {
+    return { success: false, error: 'Artifact processing timed out after 15 retries' };
   }
 
   try {
@@ -145,37 +205,142 @@ async function checkArtifactStatus(
       return { success: false, error: 'Network error while checking status' };
     }
 
-    const { curlCommand, logs } = data;
+    const { status, curlCommand, logs } = data;
 
-    if (data.status !== 200) {
-      return { success: false, error: `Failed to check status`, curlCommand, logs };
+    if (addApiLog) {
+      addApiLog({ curlCommand, logs });
     }
 
-    const status = data.data.status;
-    const artifact = data.data;
+    // Handle non-200 statuses
+    if (status === 400) {
+      return { success: false, error: 'Invalid request parameters', curlCommand, logs };
+    }
+    if (status === 401) {
+      return { success: false, error: 'Invalid or expired API token', curlCommand, logs };
+    }
+    if (status === 403) {
+      return { success: false, error: 'Access forbidden. Check your permissions.', curlCommand, logs };
+    }
+    if (status === 404) {
+      return { success: false, error: 'Artifact not found', curlCommand, logs };
+    }
+    if (status === 500) {
+      return { success: false, error: 'Bitrise server error', curlCommand, logs };
+    }
 
-    if (status === 'processed_valid') {
+    if (status !== 200) {
+      return { success: false, error: `Failed to check status (${status})`, curlCommand, logs };
+    }
+
+    const artifactStatus = data.data.status;
+
+    if (artifactStatus === 'processed_valid') {
+      // Enable public install page
+      const publicPageResult = await enablePublicInstallPage(apiToken, appId, artifactId);
+      if (addApiLog && publicPageResult.curlCommand) {
+        addApiLog({ curlCommand: publicPageResult.curlCommand, logs: publicPageResult.logs });
+      }
+
+      if (publicPageResult.success) {
+        // Fetch installable artifacts to get the public_install_page_url
+        const artifactsResult = await getInstallableArtifacts(apiToken, appId);
+        if (addApiLog && artifactsResult.curlCommand) {
+          addApiLog({ curlCommand: artifactsResult.curlCommand, logs: artifactsResult.logs });
+        }
+
+        if (artifactsResult.success && artifactsResult.data) {
+          // Filter to find the matching artifact by id and platform
+          const matchingArtifact = artifactsResult.data.find(
+            (a) => a.id === artifactId && a.platform === platform
+          );
+
+          if (matchingArtifact && matchingArtifact.public_install_page_url) {
+            return {
+              success: true,
+              data: {
+                status: 'processed_valid',
+                public_install_page_url: matchingArtifact.public_install_page_url,
+              },
+              curlCommand,
+              logs,
+            };
+          }
+        }
+
+        // Fallback if we couldn't get the URL from artifacts list
+        return {
+          success: true,
+          data: {
+            status: 'processed_valid',
+            public_install_page_url: publicPageResult.data?.public_install_page_url,
+          },
+          curlCommand,
+          logs,
+        };
+      }
+
       return {
         success: true,
         data: {
-          status: artifact.status,
-          installable_artifact_url: artifact.installable_artifact_url,
-          public_install_page_url: artifact.public_install_page_url,
+          status: 'processed_valid',
         },
         curlCommand,
         logs,
       };
-    } else if (status === 'processed_invalid') {
+    } else if (artifactStatus === 'processed_invalid') {
       return { success: false, error: 'Artifact was processed but is invalid', curlCommand, logs };
-    } else if (status === 'uploaded' || status === 'upload_requested') {
+    } else if (artifactStatus === 'uploaded' || artifactStatus === 'upload_requested' || artifactStatus === 'processing') {
       // Wait and retry
       await new Promise(resolve => setTimeout(resolve, 2000));
-      return checkArtifactStatus(apiToken, appId, artifactId, retryCount + 1);
+      return checkArtifactStatus(apiToken, appId, artifactId, platform, retryCount + 1, addApiLog);
     } else {
-      return { success: false, error: `Unexpected status: ${status}`, curlCommand, logs };
+      return { success: false, error: `Unexpected status: ${artifactStatus}`, curlCommand, logs };
     }
   } catch (error) {
     return { success: false, error: 'Network error while checking status' };
+  }
+}
+
+export async function getInstallableArtifacts(
+  apiToken: string,
+  appId: string
+): Promise<{ success: boolean; data?: InstallableArtifact[]; error?: string; curlCommand?: string; logs?: string[] }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
+      body: { action: 'getInstallableArtifacts', apiToken, appId }
+    });
+
+    if (error) {
+      return { success: false, error: 'Network error while fetching artifacts' };
+    }
+
+    const { status, curlCommand, logs } = data;
+
+    if (status === 200) {
+      const artifacts: InstallableArtifact[] = data.data?.items || [];
+      return { success: true, data: artifacts, curlCommand, logs };
+    }
+
+    // Handle non-200 statuses
+    if (status === 400) {
+      return { success: false, error: 'Invalid request parameters', curlCommand, logs };
+    }
+    if (status === 401) {
+      return { success: false, error: 'Invalid or expired API token', curlCommand, logs };
+    }
+    if (status === 403) {
+      return { success: false, error: 'Access forbidden. Check your permissions.', curlCommand, logs };
+    }
+    if (status === 404) {
+      return { success: false, error: 'Connected app not found', curlCommand, logs };
+    }
+    if (status === 500) {
+      return { success: false, error: 'Bitrise server error', curlCommand, logs };
+    }
+
+    return { success: false, error: `Failed to fetch artifacts (${status})`, curlCommand, logs };
+  } catch (error) {
+    return { success: false, error: 'Network error while fetching artifacts' };
   }
 }
 
@@ -190,13 +355,14 @@ export async function submitWhatsNew(
       body: { action: 'submitWhatsNew', apiToken, appId, artifactId, whatsNew: whatsNewText }
     });
     if (error) return { success: false, error: 'Network error' };
-    const { curlCommand, logs } = data;
-    if (data.status === 200) return { success: true, curlCommand, logs };
-    if (data.status === 400) return { success: false, error: 'Invalid request parameters', curlCommand, logs };
-    if (data.status === 401) return { success: false, error: 'Invalid or expired API token', curlCommand, logs };
-    if (data.status === 404) return { success: false, error: 'Artifact not found', curlCommand, logs };
-    if (data.status === 500) return { success: false, error: 'Bitrise server error', curlCommand, logs };
-    return { success: false, error: `Unexpected error (${data.status})`, curlCommand, logs };
+    const { status, curlCommand, logs } = data;
+    if (status === 200 || status === 204) return { success: true, curlCommand, logs };
+    if (status === 400) return { success: false, error: 'Invalid request parameters', curlCommand, logs };
+    if (status === 401) return { success: false, error: 'Invalid or expired API token', curlCommand, logs };
+    if (status === 403) return { success: false, error: 'Access forbidden. Check your permissions.', curlCommand, logs };
+    if (status === 404) return { success: false, error: 'Artifact not found', curlCommand, logs };
+    if (status === 500) return { success: false, error: 'Bitrise server error', curlCommand, logs };
+    return { success: false, error: `Unexpected error (${status})`, curlCommand, logs };
   } catch (error) {
     return { success: false, error: 'Network error' };
   }
@@ -209,31 +375,30 @@ export async function enablePublicInstallPage(
 ): Promise<{ success: boolean; data?: ArtifactStatus, error?: string; curlCommand?: string; logs?: string[] }> {
   try {
     const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
-      body: { action: 'enablePublicPage', apiToken, appId, artifactId }
+      body: { action: 'enablePublicPage', apiToken, appId, artifactId, withPublicPage: true }
     });
 
     if (error) return { success: false, error: 'Network error' };
-    const { curlCommand, logs } = data;
-    if (data.status !== 200) {
-      if (data.status === 400) return { success: false, error: 'Invalid request parameters', curlCommand, logs };
-      if (data.status === 401) return { success: false, error: 'Invalid or expired API token', curlCommand, logs };
-      if (data.status === 404) return { success: false, error: 'Artifact not found', curlCommand, logs };
-      if (data.status === 500) return { success: false, error: 'Bitrise server error', curlCommand, logs };
-      return { success: false, error: `Unexpected error (${data.status})`, curlCommand, logs };
+    const { status, curlCommand, logs } = data;
+    
+    if (status === 200 || status === 204) {
+      return {
+        success: true,
+        data: {
+          status: 'enabled',
+          public_install_page_url: data.data?.public_install_page_url,
+        },
+        curlCommand,
+        logs
+      };
     }
 
-    const artifact = data.data;
-
-    return {
-      success: true,
-      data: {
-        status: artifact.status,
-        installable_artifact_url: artifact.installable_artifact_url,
-        public_install_page_url: artifact.public_install_page_url,
-      },
-      curlCommand,
-      logs
-    };
+    if (status === 400) return { success: false, error: 'Invalid request parameters', curlCommand, logs };
+    if (status === 401) return { success: false, error: 'Invalid or expired API token', curlCommand, logs };
+    if (status === 403) return { success: false, error: 'Access forbidden. Check your permissions.', curlCommand, logs };
+    if (status === 404) return { success: false, error: 'Artifact not found', curlCommand, logs };
+    if (status === 500) return { success: false, error: 'Bitrise server error', curlCommand, logs };
+    return { success: false, error: `Unexpected error (${status})`, curlCommand, logs };
   } catch (error) {
     return { success: false, error: 'Network error' };
   }
@@ -244,6 +409,7 @@ export function uploadArtifact(
   file: File,
   apiToken: string,
   appId: string,
+  platform: 'ios' | 'android',
   onProgress: (progress: UploadProgress) => void,
   abortController: AbortController,
   addApiLog: (log: { curlCommand?: string; logs?: string[] }) => void
@@ -298,8 +464,8 @@ export function uploadArtifact(
     xhr.addEventListener('load', () => {
       const processArtifact = async () => {
         if (xhr.status >= 200 && xhr.status < 300) {
-          // Step 3: Check artifact processing status
-          const statusResult = await checkArtifactStatus(apiToken, appId, artifactId);
+          // Step 3: Check artifact processing status (includes auto-enable public page)
+          const statusResult = await checkArtifactStatus(apiToken, appId, artifactId, platform, 0, addApiLog);
 
           if (statusResult.success) {
             resolve({

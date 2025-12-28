@@ -95,12 +95,15 @@ Deno.serve(async (req: Request) => {
           );
         }
         // Updated endpoint: /connected-apps/{connected_app_id}/installable-artifacts/{installable_artifact_id}/upload-url
-        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/upload-url`;
-        const headers = { 'Authorization': apiToken, 'Content-Type': 'application/json' };
-        const payload = JSON.stringify({ file_name: fileName, file_size_bytes: fileSizeBytes });
-        curlCommand = generateCurlCommand(url, 'POST', headers, payload);
+        const queryParams = new URLSearchParams({
+          file_name: fileName,
+          file_size_bytes: fileSizeBytes.toString(),
+        }).toString();
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/upload-url?${queryParams}`;
+        const headers = { 'Authorization': apiToken };
+        curlCommand = generateCurlCommand(url, 'GET', headers);
         logs.push(curlCommand);
-        response = await fetch(url, { method: 'POST', headers, body: payload });
+        response = await fetch(url, { method: 'GET', headers });
         logs.push(`Bitrise API response status: ${response.status}`);
         break;
       }

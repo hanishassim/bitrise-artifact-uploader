@@ -49,15 +49,12 @@ export function AppSelector({
 
     if (result.success && result.data) {
       setApps(result.data);
-      if (result.data.length === 1) {
-        onAppSelect(result.data[0]);
-      }
     } else {
       setError(result.error || 'Failed to load apps');
     }
 
     setIsLoading(false);
-  }, [isConnected, apiToken, workspaceId, addApiLog, onAppSelect]);
+  }, [isConnected, apiToken, workspaceId, addApiLog]);
 
   useEffect(() => {
     // Reset apps when connection status changes
@@ -69,6 +66,12 @@ export function AppSelector({
       fetchApps();
     }
   }, [isConnected, fetchApps]);
+
+  useEffect(() => {
+    if (apps.length === 1) {
+      onAppSelect(apps[0]);
+    }
+  }, [apps, onAppSelect]);
 
 
   const filteredApps = useMemo(() => {

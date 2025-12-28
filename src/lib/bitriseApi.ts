@@ -53,7 +53,7 @@ export async function listConnectedApps(
     const { status, curlCommand, logs } = data;
 
     if (status === 200) {
-      const apps: ConnectedApp[] = data.data.data || [];
+      const apps: ConnectedApp[] = data.data?.items || [];
       return { success: true, data: apps, curlCommand, logs };
     }
 

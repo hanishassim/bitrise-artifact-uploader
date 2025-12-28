@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,25 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
   const [copied, setCopied] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleReset = useCallback(() => {
+    setSelectedFile(null);
+    setFileHash('');
+    setWhatsNew('');
+    setUploadState('idle');
+    setProgress(null);
+    setErrorMessage('');
+    setArtifactStatus(null);
+    setCopied(false);
+    onClearLastArtifact();
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  }, [onClearLastArtifact]);
+
+  useEffect(() => {
+    if (!selectedApp) {
+      handleReset();
+    }
+  }, [selectedApp, handleReset]);
 
   const handleFile = useCallback(async (file: File) => {
     if (!isValidArtifactFile(file)) {
@@ -155,19 +174,6 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
     abortController?.abort();
     setUploadState('idle');
     setProgress(null);
-  };
-
-  const handleReset = () => {
-    setSelectedFile(null);
-    setFileHash('');
-    setWhatsNew('');
-    setUploadState('idle');
-    setProgress(null);
-    setErrorMessage('');
-    setArtifactStatus(null);
-    setCopied(false);
-    onClearLastArtifact();
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleCopyLink = async () => {

@@ -68,6 +68,7 @@ const Index = () => {
                 onApiTokenChange={setApiToken}
                 onWorkspaceIdChange={setWorkspaceId}
                 onOrganizationNameChange={setOrganizationName}
+                onOrganizationChange={() => setSelectedApp(null)}
                 isConnected={isConnected}
                 onConnectionChange={setIsConnected}
                 addApiLog={addLog}

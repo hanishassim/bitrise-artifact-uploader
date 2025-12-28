@@ -214,7 +214,7 @@ export function AppSelector({
                     key={app.id}
                     onClick={() => onAppSelect(app)}
                     className={`w-full flex items-center gap-3 rounded-lg border p-3 text-left transition-all hover:bg-accent/50 ${selectedAppId === app.id
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                      ? 'border-primary bg-primary/10 ring-2 ring-primary/50'
                       : 'border-border/50 bg-muted/30 hover:border-primary/50'
                       }`}
                   >

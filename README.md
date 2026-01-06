@@ -2,14 +2,14 @@
 
 ![Bitrise-uploader](https://github.com/user-attachments/assets/6ee98726-bfca-4ab0-93ce-0dab39697c6c)
 
-This open-source project is a web-based tool for uploading mobile application artifacts (IPA, APK, and AAB files) to Bitrise™️ Release Management. It provides a simple and intuitive interface for selecting your Bitrise™️ app and uploading new builds.
+This open-source project is a web-based tool for uploading mobile application artifacts (IPA, APK, and AAB files) to Bitrise Release Management. It provides a simple and intuitive interface for selecting your Bitrise app and uploading new builds.
 
-The application uses a Supabase™️ Edge Function (`bitrise-proxy`) to securely communicate with the Bitrise™️ API, ensuring that your API tokens are never exposed on the client-side.
+The application uses a Supabase Edge Function (`bitrise-proxy`) to securely communicate with the Bitrise API, ensuring that your API tokens are never exposed on the client-side.
 
 ## Features
 
--   Securely connect to your Bitrise™️ account using an API token and workspace ID.
--   List and select from your available Bitrise™️ applications.
+-   Securely connect to your Bitrise account using an API token and workspace ID.
+-   List and select from your available Bitrise applications.
 -   Drag-and-drop or browse to upload your `.ipa`, `.apk`, or `.aab` files.
 -   View a history of your recent uploads.
 -   See detailed API logs for debugging purposes.
@@ -44,7 +44,7 @@ Before starting the development server, you need to set up your environment vari
     cp .env.example .env
     ```
 
-2.  **Add your Supabase™️ credentials:** Open the `.env` file and replace the placeholder values with your Supabase™️ project's credentials. You can find these in your Supabase™️ project's "API" settings.
+2.  **Add your Supabase credentials:** Open the `.env` file and replace the placeholder values with your Supabase project's credentials. You can find these in your Supabase project's "API" settings.
 
     ```
     VITE_SUPABASE_PROJECT_ID="your-project-id"
@@ -52,9 +52,9 @@ Before starting the development server, you need to set up your environment vari
     VITE_SUPABASE_URL="https://your-project-id.supabase.co"
     ```
 
-## Deploying Supabase™️ Edge Functions
+## Deploying Supabase Edge Functions
 
-This project requires the `bitrise-proxy` Edge Function to be deployed to your Supabase™️ project to handle Bitrise™️ API requests securely.
+This project requires the `bitrise-proxy` Edge Function to be deployed to your Supabase project to handle Bitrise API requests securely.
 
 1.  **Install the Supabase CLI:**
 
@@ -62,15 +62,15 @@ This project requires the `bitrise-proxy` Edge Function to be deployed to your S
     npm i supabase --save-dev
     ```
 
-2.  **Update the Supabase™️ config file:** Open `supabase/config.toml` and replace the placeholder `project_id` with your actual Supabase™️ project ID.
+2.  **Update the Supabase config file:** Open `supabase/config.toml` and replace the placeholder `project_id` with your actual Supabase project ID.
 
-3.  **Link your Supabase™️ project:**
+3.  **Link your Supabase project:**
 
     ```sh
     npx supabase link --project-ref <PROJECT_ID>
     ```
 
-3.  **Set your Supabase™️ access token:** You will need to provide a `SUPABASE_ACCESS_TOKEN` with `owner` or `admin` permissions for the CLI to deploy the function.
+3.  **Set your Supabase access token:** You will need to provide a `SUPABASE_ACCESS_TOKEN` with `owner` or `admin` permissions for the CLI to deploy the function.
 
     ```sh
     export SUPABASE_ACCESS_TOKEN=<YOUR_ACCESS_TOKEN>
@@ -79,10 +79,10 @@ This project requires the `bitrise-proxy` Edge Function to be deployed to your S
 4.  **Deploy the Edge Function:**
 
     ```sh
-    npx supabase functions deploy --no-verify-jwt bitrise-proxy
+    npx supabase functions deploy --no-verify-jwt bitrise-proxy bitrise-upload
     ```
 
-After completing these steps, the `bitrise-proxy` function will be ready to handle API requests.
+After completing these steps, the `bitrise-proxy` & `bitrise-upload` functions will be ready to handle API requests.
 
 ## Technologies Used
 
@@ -105,7 +105,7 @@ We welcome contributions from the community to help make Habo even better! Wheth
 
 ## License
 
-Bitrise™️ Artifact Uploader is released under the [MIT license](LICENSE). Feel free to use, modify, and distribute it as you wish. 
+Bitrise Artifact Uploader is released under the [MIT license](LICENSE). Feel free to use, modify, and distribute it as you wish. 
 
 ## Support
 

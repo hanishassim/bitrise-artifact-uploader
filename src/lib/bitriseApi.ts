@@ -469,8 +469,7 @@ export function uploadArtifact(
 
       const uploadInfo = uploadUrlResult.data;
 
-      // Step 2: Perform the actual file upload using XHR
-      // Only set Content-Type header to avoid CORS preflight issues with GCS
+      // Step 2: Upload file via streaming proxy to bypass CORS
       const xhr = new XMLHttpRequest();
       const startTime = Date.now();
       let lastLoaded = 0;
@@ -501,24 +500,33 @@ export function uploadArtifact(
 
       xhr.addEventListener('load', () => {
         const processArtifact = async () => {
-          if (xhr.status >= 200 && xhr.status < 300) {
-            // Step 3: Check artifact processing status
-            const statusResult = await checkArtifactStatus(apiToken, appId, artifactId, platform, 0, addApiLog);
+          try {
+            const result = JSON.parse(xhr.responseText);
+            
+            if (result.success) {
+              // Step 3: Check artifact processing status
+              const statusResult = await checkArtifactStatus(apiToken, appId, artifactId, platform, 0, addApiLog);
 
-            if (statusResult.success) {
-              resolve({
-                success: true,
-                message: 'Upload successful!',
-                artifactId,
-                artifactStatus: statusResult.data,
-              });
+              if (statusResult.success) {
+                resolve({
+                  success: true,
+                  message: 'Upload successful!',
+                  artifactId,
+                  artifactStatus: statusResult.data,
+                });
+              } else {
+                resolve({
+                  success: false,
+                  message: statusResult.error || 'Artifact processing failed',
+                });
+              }
             } else {
               resolve({
                 success: false,
-                message: statusResult.error || 'Artifact processing failed',
+                message: result.message || `Upload failed: ${result.status}`,
               });
             }
-          } else {
+          } catch {
             resolve({
               success: false,
               message: `Upload failed: ${xhr.status} ${xhr.statusText}`,
@@ -543,27 +551,26 @@ export function uploadArtifact(
         xhr.abort();
       });
 
-      // Open connection
-      xhr.open(uploadInfo.method, uploadInfo.url);
+      // Use the streaming upload proxy
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
       
-      // Only set Content-Type header - avoid X-Goog headers as they trigger CORS preflight
-      // The signed URL already contains all required authentication
-      const headersArray = Object.values(uploadInfo.headers);
-      const contentTypeHeader = headersArray.find((h) => 
-        h.name.toLowerCase() === 'content-type'
-      );
-      if (contentTypeHeader) {
-        xhr.setRequestHeader(contentTypeHeader.name, contentTypeHeader.value);
-      }
+      xhr.open('POST', `${supabaseUrl}/functions/v1/bitrise-upload`);
+      xhr.setRequestHeader('Authorization', `Bearer ${supabaseKey}`);
+      xhr.setRequestHeader('apikey', supabaseKey);
+      xhr.setRequestHeader('x-upload-url', uploadInfo.url);
+      xhr.setRequestHeader('x-file-size', file.size.toString());
+      xhr.setRequestHeader('x-file-name', file.name);
 
-      // Generate and log cURL command
+      // Generate and log cURL command for reference
+      const headersArray = Object.values(uploadInfo.headers);
       const headers: Record<string, string> = {};
       headersArray.forEach((header) => {
         headers[header.name] = header.value;
       });
       const headerPart = Object.entries(headers).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
-      const curlCommand = `curl -X ${uploadInfo.method} ${headerPart} --data-binary '@${file.name}' '${uploadInfo.url}'`;
-      addApiLog({ curlCommand, logs: [`[File Upload] Uploading ${file.name} (${file.size} bytes)`] });
+      const curlCommand = `curl -X PUT ${headerPart} --upload-file '${file.name}' '${uploadInfo.url}'`;
+      addApiLog({ curlCommand, logs: [`[File Upload] Uploading ${file.name} (${file.size} bytes) via proxy`] });
 
       xhr.send(file);
     };

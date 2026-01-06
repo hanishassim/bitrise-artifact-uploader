@@ -1,1 +1,7 @@
-project_id = "lwfpphhdsjgdsgmeftoy"
+project_id = "aplbwoemzesywfiblcwe"
+
+[functions.bitrise-proxy]
+verify_jwt = false
+
+[functions.bitrise-upload]
+verify_jwt = false

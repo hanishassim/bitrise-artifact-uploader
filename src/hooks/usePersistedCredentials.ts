@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { ObfuscatedCredentialStorage } from '@/lib/ObfuscatedCredentialStorage';
 
 const CREDENTIALS_KEY = 'bitrise-credentials';
 
@@ -9,57 +10,50 @@ interface StoredCredentials {
 }
 
 export function usePersistedCredentials() {
+  const credentialStorage = useMemo(() => new ObfuscatedCredentialStorage<StoredCredentials>(CREDENTIALS_KEY), []);
+
   const [apiToken, setApiToken] = useState('');
   const [appId, setAppId] = useState('');
   const [workspaceId, setWorkspaceId] = useState('');
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(CREDENTIALS_KEY);
+    const stored = credentialStorage.get();
     if (stored) {
-      try {
-        const {
-          apiToken: storedToken,
-          appId: storedAppId,
-          workspaceId: storedWorkspaceId,
-        } = JSON.parse(stored) as StoredCredentials;
-        setApiToken(storedToken || '');
-        setAppId(storedAppId || '');
-        setWorkspaceId(storedWorkspaceId || '');
-      } catch {
-        // Invalid stored data, ignore
-      }
+      setApiToken(stored.apiToken || '');
+      setAppId(stored.appId || '');
+      setWorkspaceId(stored.workspaceId || '');
     }
     setIsLoaded(true);
-  }, []);
+  }, [credentialStorage]);
+
+  const updateCredentials = useCallback((newValues: Partial<StoredCredentials>) => {
+    const current = credentialStorage.get() || { apiToken: '', appId: '', workspaceId: '' };
+    const updated = { ...current, ...newValues };
+    credentialStorage.set(updated);
+  }, [credentialStorage]);
 
   const updateApiToken = useCallback((value: string) => {
     setApiToken(value);
-    const stored = localStorage.getItem(CREDENTIALS_KEY);
-    const current = stored ? JSON.parse(stored) : {};
-    localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ ...current, apiToken: value }));
-  }, []);
+    updateCredentials({ apiToken: value });
+  }, [updateCredentials]);
 
   const updateAppId = useCallback((value: string) => {
     setAppId(value);
-    const stored = localStorage.getItem(CREDENTIALS_KEY);
-    const current = stored ? JSON.parse(stored) : {};
-    localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ ...current, appId: value }));
-  }, []);
+    updateCredentials({ appId: value });
+  }, [updateCredentials]);
 
   const updateWorkspaceId = useCallback((value: string) => {
     setWorkspaceId(value);
-    const stored = localStorage.getItem(CREDENTIALS_KEY);
-    const current = stored ? JSON.parse(stored) : {};
-    localStorage.setItem(CREDENTIALS_KEY, JSON.stringify({ ...current, workspaceId: value }));
-  }, []);
+    updateCredentials({ workspaceId: value });
+  }, [updateCredentials]);
 
   const clearCredentials = useCallback(() => {
     setApiToken('');
     setAppId('');
     setWorkspaceId('');
-    localStorage.removeItem(CREDENTIALS_KEY);
-  }, []);
+    credentialStorage.clear();
+  }, [credentialStorage]);
 
   return {
     apiToken,

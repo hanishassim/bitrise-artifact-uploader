@@ -469,62 +469,39 @@ export function uploadArtifact(
 
       const uploadInfo = uploadUrlResult.data;
 
-      // Step 2: Read file as base64 and upload via proxy to avoid CORS issues
-      onProgress({
-        loaded: 0,
-        total: file.size,
-        percentage: 0,
-        speed: 0,
-        estimatedTimeRemaining: 0,
+      // Step 2: Perform the actual file upload using XHR
+      // Only set Content-Type header to avoid CORS preflight issues with GCS
+      const xhr = new XMLHttpRequest();
+      const startTime = Date.now();
+      let lastLoaded = 0;
+      let lastTime = startTime;
+
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const now = Date.now();
+          const timeDiff = (now - lastTime) / 1000;
+          const loadedDiff = event.loaded - lastLoaded;
+          
+          const speed = timeDiff > 0 ? loadedDiff / timeDiff : 0;
+          const remaining = event.total - event.loaded;
+          const estimatedTimeRemaining = speed > 0 ? remaining / speed : 0;
+
+          onProgress({
+            loaded: event.loaded,
+            total: event.total,
+            percentage: Math.round((event.loaded / event.total) * 100),
+            speed,
+            estimatedTimeRemaining,
+          });
+
+          lastLoaded = event.loaded;
+          lastTime = now;
+        }
       });
 
-      const reader = new FileReader();
-      reader.onload = async () => {
-        try {
-          if (abortController.signal.aborted) {
-            reject(new Error('Upload cancelled'));
-            return;
-          }
-
-          const base64Data = (reader.result as string).split(',')[1];
-          
-          onProgress({
-            loaded: file.size * 0.1,
-            total: file.size,
-            percentage: 10,
-            speed: 0,
-            estimatedTimeRemaining: 0,
-          });
-
-          // Upload via proxy
-          const { data: uploadResult, error: uploadError } = await supabase.functions.invoke('bitrise-proxy', {
-            body: {
-              action: 'uploadFile',
-              uploadUrl: uploadInfo.url,
-              uploadHeaders: uploadInfo.headers,
-              fileData: base64Data,
-            },
-          });
-
-          if (uploadError) {
-            resolve({
-              success: false,
-              message: `Upload failed: ${uploadError.message}`,
-            });
-            return;
-          }
-
-          addApiLog({ curlCommand: uploadResult?.curlCommand, logs: uploadResult?.logs });
-
-          if (uploadResult?.success) {
-            onProgress({
-              loaded: file.size,
-              total: file.size,
-              percentage: 100,
-              speed: 0,
-              estimatedTimeRemaining: 0,
-            });
-
+      xhr.addEventListener('load', () => {
+        const processArtifact = async () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
             // Step 3: Check artifact processing status
             const statusResult = await checkArtifactStatus(apiToken, appId, artifactId, platform, 0, addApiLog);
 
@@ -544,25 +521,51 @@ export function uploadArtifact(
           } else {
             resolve({
               success: false,
-              message: `Upload failed with status: ${uploadResult?.status}`,
+              message: `Upload failed: ${xhr.status} ${xhr.statusText}`,
             });
           }
-        } catch (err) {
-          resolve({
-            success: false,
-            message: `Upload error: ${err instanceof Error ? err.message : 'Unknown error'}`,
-          });
-        }
-      };
+        };
+        processArtifact();
+      });
 
-      reader.onerror = () => {
+      xhr.addEventListener('error', () => {
         resolve({
           success: false,
-          message: 'Failed to read file',
+          message: 'Network error during upload',
         });
-      };
+      });
 
-      reader.readAsDataURL(file);
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload cancelled'));
+      });
+
+      abortController.signal.addEventListener('abort', () => {
+        xhr.abort();
+      });
+
+      // Open connection
+      xhr.open(uploadInfo.method, uploadInfo.url);
+      
+      // Only set Content-Type header - avoid X-Goog headers as they trigger CORS preflight
+      // The signed URL already contains all required authentication
+      const headersArray = Object.values(uploadInfo.headers);
+      const contentTypeHeader = headersArray.find((h) => 
+        h.name.toLowerCase() === 'content-type'
+      );
+      if (contentTypeHeader) {
+        xhr.setRequestHeader(contentTypeHeader.name, contentTypeHeader.value);
+      }
+
+      // Generate and log cURL command
+      const headers: Record<string, string> = {};
+      headersArray.forEach((header) => {
+        headers[header.name] = header.value;
+      });
+      const headerPart = Object.entries(headers).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
+      const curlCommand = `curl -X ${uploadInfo.method} ${headerPart} --data-binary '@${file.name}' '${uploadInfo.url}'`;
+      addApiLog({ curlCommand, logs: [`[File Upload] Uploading ${file.name} (${file.size} bytes)`] });
+
+      xhr.send(file);
     };
     upload();
   });

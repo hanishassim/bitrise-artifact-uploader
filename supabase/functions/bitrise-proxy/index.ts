@@ -197,6 +197,54 @@ Deno.serve(async (req: Request) => {
         break;
       }
 
+      case 'uploadFile': {
+        logs.push('Action: uploadFile');
+        const { uploadUrl, uploadHeaders, fileData } = body;
+        if (!uploadUrl || !fileData) {
+          logs.push('Error: Missing uploadUrl or fileData');
+          return new Response(
+            JSON.stringify({ error: 'Missing uploadUrl or fileData', logs }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Convert base64 to binary
+        const binaryData = Uint8Array.from(atob(fileData), c => c.charCodeAt(0));
+        logs.push(`Uploading file of size: ${binaryData.length} bytes`);
+
+        // Build headers from uploadHeaders array
+        const reqHeaders: Record<string, string> = {};
+        if (uploadHeaders && Array.isArray(uploadHeaders)) {
+          uploadHeaders.forEach((h: { name: string; value: string }) => {
+            reqHeaders[h.name] = h.value;
+          });
+        }
+
+        curlCommand = generateCurlCommand(uploadUrl, 'PUT', reqHeaders, '[binary data]');
+        logs.push(curlCommand);
+
+        response = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: reqHeaders,
+          body: binaryData,
+        });
+        logs.push(`GCS upload response status: ${response.status}`);
+
+        // Return success/failure based on status
+        return new Response(
+          JSON.stringify({ 
+            status: response.status, 
+            success: response.status >= 200 && response.status < 300,
+            curlCommand, 
+            logs 
+          }),
+          {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
+      }
+
       default:
         logs.push(`Error: Invalid action - ${action}`);
         return new Response(

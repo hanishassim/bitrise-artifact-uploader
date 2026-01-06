@@ -27,7 +27,8 @@ Deno.serve(async (req: Request) => {
     const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes, whatsNew, withPublicPage } = body;
     logs.push(`Action: ${action}`);
 
-    if (!apiToken) {
+    // uploadFile action doesn't require apiToken (uses pre-signed URL)
+    if (!apiToken && action !== 'uploadFile') {
       logs.push('Error: Missing apiToken');
       return new Response(
         JSON.stringify({ error: 'Missing apiToken', logs }),

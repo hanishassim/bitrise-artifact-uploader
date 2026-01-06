@@ -469,97 +469,111 @@ export function uploadArtifact(
 
       const uploadInfo = uploadUrlResult.data;
 
-      // Step 2: Perform the actual file upload to the pre-signed URL.
-      // The response from getUploadUrl includes the exact URL, method (PUT), and headers required for this request.
-    const xhr = new XMLHttpRequest();
-    const startTime = Date.now();
-    let lastLoaded = 0;
-    let lastTime = startTime;
+      // Step 2: Upload file via streaming proxy to bypass CORS
+      const xhr = new XMLHttpRequest();
+      const startTime = Date.now();
+      let lastLoaded = 0;
+      let lastTime = startTime;
 
-    xhr.upload.addEventListener('progress', (event) => {
-      if (event.lengthComputable) {
-        const now = Date.now();
-        const timeDiff = (now - lastTime) / 1000;
-        const loadedDiff = event.loaded - lastLoaded;
-        
-        const speed = timeDiff > 0 ? loadedDiff / timeDiff : 0;
-        const remaining = event.total - event.loaded;
-        const estimatedTimeRemaining = speed > 0 ? remaining / speed : 0;
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable) {
+          const now = Date.now();
+          const timeDiff = (now - lastTime) / 1000;
+          const loadedDiff = event.loaded - lastLoaded;
+          
+          const speed = timeDiff > 0 ? loadedDiff / timeDiff : 0;
+          const remaining = event.total - event.loaded;
+          const estimatedTimeRemaining = speed > 0 ? remaining / speed : 0;
 
-        onProgress({
-          loaded: event.loaded,
-          total: event.total,
-          percentage: Math.round((event.loaded / event.total) * 100),
-          speed,
-          estimatedTimeRemaining,
-        });
+          onProgress({
+            loaded: event.loaded,
+            total: event.total,
+            percentage: Math.round((event.loaded / event.total) * 100),
+            speed,
+            estimatedTimeRemaining,
+          });
 
-        lastLoaded = event.loaded;
-        lastTime = now;
-      }
-    });
+          lastLoaded = event.loaded;
+          lastTime = now;
+        }
+      });
 
-    xhr.addEventListener('load', () => {
-      const processArtifact = async () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          // Step 3: Check artifact processing status (includes auto-enable public page)
-          const statusResult = await checkArtifactStatus(apiToken, appId, artifactId, platform, 0, addApiLog);
+      xhr.addEventListener('load', () => {
+        const processArtifact = async () => {
+          try {
+            const result = JSON.parse(xhr.responseText);
+            
+            if (result.success) {
+              // Step 3: Check artifact processing status
+              const statusResult = await checkArtifactStatus(apiToken, appId, artifactId, platform, 0, addApiLog);
 
-          if (statusResult.success) {
-            resolve({
-              success: true,
-              message: 'Upload successful!',
-              artifactId,
-              artifactStatus: statusResult.data,
-            });
-          } else {
+              if (statusResult.success) {
+                resolve({
+                  success: true,
+                  message: 'Upload successful!',
+                  artifactId,
+                  artifactStatus: statusResult.data,
+                });
+              } else {
+                resolve({
+                  success: false,
+                  message: statusResult.error || 'Artifact processing failed',
+                });
+              }
+            } else {
+              resolve({
+                success: false,
+                message: result.message || `Upload failed: ${result.status}`,
+              });
+            }
+          } catch {
             resolve({
               success: false,
-              message: statusResult.error || 'Artifact processing failed',
+              message: `Upload failed: ${xhr.status} ${xhr.statusText}`,
             });
           }
-        } else {
-          resolve({
-            success: false,
-            message: `Upload failed: ${xhr.statusText}`,
-          });
-        }
-      };
-      processArtifact();
-    });
-
-    xhr.addEventListener('error', () => {
-      resolve({
-        success: false,
-        message: 'Network error during upload',
+        };
+        processArtifact();
       });
-    });
 
-    xhr.addEventListener('abort', () => {
-      reject(new Error('Upload cancelled'));
-    });
+      xhr.addEventListener('error', () => {
+        resolve({
+          success: false,
+          message: 'Network error during upload',
+        });
+      });
 
-    abortController.signal.addEventListener('abort', () => {
-      xhr.abort();
-    });
+      xhr.addEventListener('abort', () => {
+        reject(new Error('Upload cancelled'));
+      });
 
-    // Open connection with the method from Bitrise API
-    xhr.open(uploadInfo.method, uploadInfo.url);
-    
-    // Set headers from Bitrise API response
-    const headers: Record<string, string> = {};
-    Object.values(uploadInfo.headers).forEach((header) => {
-      xhr.setRequestHeader(header.name, header.value);
-      headers[header.name] = header.value;
-    });
+      abortController.signal.addEventListener('abort', () => {
+        xhr.abort();
+      });
 
-    // Generate and log cURL command for the upload
-    const headerPart = Object.entries(headers).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
-    const curlCommand = `curl -X ${uploadInfo.method} ${headerPart} --data-binary '@${file.name}' '${uploadInfo.url}'`;
-    addApiLog({ curlCommand, logs: [`[File Upload] cURL command generated for ${file.name}`] });
+      // Use the streaming upload proxy
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      
+      xhr.open('POST', `${supabaseUrl}/functions/v1/bitrise-upload`);
+      xhr.setRequestHeader('Authorization', `Bearer ${supabaseKey}`);
+      xhr.setRequestHeader('apikey', supabaseKey);
+      xhr.setRequestHeader('x-upload-url', uploadInfo.url);
+      xhr.setRequestHeader('x-file-size', file.size.toString());
+      xhr.setRequestHeader('x-file-name', file.name);
 
-    xhr.send(file);
-    }
+      // Generate and log cURL command for reference
+      const headersArray = Object.values(uploadInfo.headers);
+      const headers: Record<string, string> = {};
+      headersArray.forEach((header) => {
+        headers[header.name] = header.value;
+      });
+      const headerPart = Object.entries(headers).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
+      const curlCommand = `curl -X PUT ${headerPart} --upload-file '${file.name}' '${uploadInfo.url}'`;
+      addApiLog({ curlCommand, logs: [`[File Upload] Uploading ${file.name} (${file.size} bytes) via proxy`] });
+
+      xhr.send(file);
+    };
     upload();
   });
 }

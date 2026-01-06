@@ -7,13 +7,22 @@ Deno.serve(async (req: Request) => {
   const logs: string[] = [];
   logs.push(`Request received at ${new Date().toISOString()}`);
 
-  const origin = req.headers.get('Origin');
-  const isAllowedOrigin = origin && /^http:\/\/localhost:\d+$/.test(origin);
-  logs.push(`Origin: ${origin}, Allowed: ${isAllowedOrigin}`);
+  const origin = req.headers.get('Origin') || '';
+  logs.push(`Origin: ${origin}`);
+
+  // IMPORTANT: Replace this with your frontend's production URL
+  const productionUrl = process.env.PRODUCTION_URL || 'https://bitrise-artifact-uploader.vercel.app' || 'https://artifact-uploader.lovable.app';
+
+  const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:8080',
+    productionUrl,
+  ];
 
   const corsHeaders = {
-    'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '*',
+    'Access-Control-Allow-Origin': allowedOrigins.includes(origin) ? origin : allowedOrigins[0],
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-workspace-id',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   };
 
   if (req.method === 'OPTIONS') {
@@ -27,7 +36,8 @@ Deno.serve(async (req: Request) => {
     const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes, whatsNew, withPublicPage } = body;
     logs.push(`Action: ${action}`);
 
-    if (!apiToken) {
+    // uploadFile action doesn't require apiToken (uses pre-signed URL)
+    if (!apiToken && action !== 'uploadFile') {
       logs.push('Error: Missing apiToken');
       return new Response(
         JSON.stringify({ error: 'Missing apiToken', logs }),
@@ -40,7 +50,12 @@ Deno.serve(async (req: Request) => {
     let curlCommand: string | undefined;
 
     const generateCurlCommand = (url: string, method: string, headers: Record<string, string>, body?: string) => {
-      const headerPart = Object.entries(headers).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
+      const redactedHeaders = { ...headers };
+      if (redactedHeaders['Authorization']) {
+        redactedHeaders['Authorization'] = '[REDACTED]';
+      }
+
+      const headerPart = Object.entries(redactedHeaders).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
       let command = `curl -X ${method} ${headerPart} '${url}'`;
       if (body) {
         command += ` -d '${body.replace(/'/g, "'\\''")}'`;

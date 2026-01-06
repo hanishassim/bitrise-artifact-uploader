@@ -33,7 +33,7 @@ export class ObfuscatedCredentialStorage<T> {
   private generateRandomKey(): string {
     const array = new Uint32Array(8);
     window.crypto.getRandomValues(array);
-    return Array.from(array, dec => ('0' + dec.toString(16)).substr(-2)).join('');
+    return Array.from(array, dec => ('0' + dec.toString(16)).slice(-2)).join('');
   }
 
   private getSessionKey(): string | null {

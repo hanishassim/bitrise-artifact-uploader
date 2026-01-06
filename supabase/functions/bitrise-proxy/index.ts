@@ -7,13 +7,13 @@ Deno.serve(async (req: Request) => {
   const logs: string[] = [];
   logs.push(`Request received at ${new Date().toISOString()}`);
 
-  const origin = req.headers.get('Origin');
-  const isAllowedOrigin = origin && /^http:\/\/localhost:\d+$/.test(origin);
-  logs.push(`Origin: ${origin}, Allowed: ${isAllowedOrigin}`);
+  const origin = req.headers.get('Origin') || '*';
+  logs.push(`Origin: ${origin}`);
 
   const corsHeaders = {
-    'Access-Control-Allow-Origin': isAllowedOrigin ? origin : '*',
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-workspace-id',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
   };
 
   if (req.method === 'OPTIONS') {

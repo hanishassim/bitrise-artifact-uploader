@@ -1,4 +1,4 @@
-# Bitrise™️ Artifact Uploader
+# Bitrise Artifact Uploader
 
 ![Bitrise-uploader](https://github.com/user-attachments/assets/6ee98726-bfca-4ab0-93ce-0dab39697c6c)
 
@@ -13,6 +13,91 @@ The application uses a Supabase Edge Function (`bitrise-proxy`) to securely comm
 -   Drag-and-drop or browse to upload your `.ipa`, `.apk`, or `.aab` files.
 -   View a history of your recent uploads.
 -   See detailed API logs for debugging purposes.
+
+## Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant ReactApp as React App
+    participant SupabaseEdge as Supabase Edge Function
+    participant BitriseAPI as Bitrise API
+    participant BitriseStorage as Bitrise Storage
+
+    Note over User, BitriseStorage: Authentication & App Selection
+    User->>ReactApp: Enter API Token & Workspace ID
+    ReactApp->>SupabaseEdge: Test Connection (listConnectedApps)
+    SupabaseEdge->>BitriseAPI: GET /release-management/v1/connected-apps
+    BitriseAPI-->>SupabaseEdge: Apps list + status
+    SupabaseEdge-->>ReactApp: Response + logs + curl command
+    ReactApp-->>User: Show connected apps list
+
+    User->>ReactApp: Select app from list
+    ReactApp->>ReactApp: Store selected app in state
+
+    Note over User, BitriseStorage: File Upload Flow
+    User->>ReactApp: Drag & drop or select artifact file
+    ReactApp->>ReactApp: Validate file type (IPA/APK/AAB)
+    ReactApp->>ReactApp: Calculate SHA256 hash
+    ReactApp-->>User: Show file details + hash
+
+    User->>ReactApp: Click Upload (optional: add "What's New")
+    ReactApp->>ReactApp: Generate unique artifact ID
+    
+    Note over ReactApp, BitriseAPI: Get Upload URL
+    ReactApp->>SupabaseEdge: getUploadUrl(apiToken, appId, artifactId, fileName, fileSize)
+    SupabaseEdge->>BitriseAPI: GET /connected-apps/{appId}/installable-artifacts/{artifactId}/upload-url
+    BitriseAPI-->>SupabaseEdge: Pre-signed upload URL + headers
+    SupabaseEdge-->>ReactApp: Upload URL + logs + curl command
+
+    Note over ReactApp, BitriseStorage: Direct File Upload
+    ReactApp->>BitriseStorage: PUT file to pre-signed URL
+    BitriseStorage-->>ReactApp: Upload progress events
+    ReactApp-->>User: Show upload progress (speed, ETA)
+    BitriseStorage-->>ReactApp: Upload complete (200 OK)
+
+    Note over ReactApp, BitriseAPI: Status Polling & Processing
+    loop Poll every 2 seconds (max 15 retries)
+        ReactApp->>SupabaseEdge: checkStatus(apiToken, appId, artifactId)
+        SupabaseEdge->>BitriseAPI: GET /connected-apps/{appId}/installable-artifacts/{artifactId}/status
+        BitriseAPI-->>SupabaseEdge: Status response
+        SupabaseEdge-->>ReactApp: Status + logs + curl command
+    end
+    
+    alt Status is processed_valid
+        ReactApp->>SupabaseEdge: enablePublicPage(apiToken, appId, artifactId)
+        SupabaseEdge->>BitriseAPI: PATCH /connected-apps/{appId}/installable-artifacts/{artifactId}/public-install-page
+        BitriseAPI-->>SupabaseEdge: Public page enabled
+        SupabaseEdge-->>ReactApp: Response + logs + curl command
+        
+        ReactApp->>SupabaseEdge: getInstallableArtifacts(apiToken, appId)
+        SupabaseEdge->>BitriseAPI: GET /connected-apps/{appId}/installable-artifacts
+        BitriseAPI-->>SupabaseEdge: Artifacts list with public URLs
+        SupabaseEdge-->>ReactApp: Artifacts + logs + curl command
+        
+    else Status is processed_invalid
+        ReactApp-->>User: Show error - artifact is invalid
+    end
+
+    Note over ReactApp, BitriseAPI: Optional Release Notes
+    opt User provided "What's New" text
+        ReactApp->>SupabaseEdge: submitWhatsNew(apiToken, appId, artifactId, whatsNew)
+        SupabaseEdge->>BitriseAPI: PATCH /connected-apps/{appId}/installable-artifacts/{artifactId}/what-to-test
+        BitriseAPI-->>SupabaseEdge: Release notes updated
+        SupabaseEdge-->>ReactApp: Response + logs + curl command
+    end
+
+    Note over User, ReactApp: Success State
+    ReactApp-->>User: Show success with QR code & install link
+    ReactApp->>ReactApp: Save upload to history (localStorage)
+    ReactApp->>ReactApp: Show API logs panel with all curl commands
+
+    Note over User, ReactApp: Error Handling
+    alt Any API call fails
+        ReactApp-->>User: Show error message + API logs
+        ReactApp->>ReactApp: Save failed upload to history
+    end
+```
 
 ## Getting Started
 
@@ -98,10 +183,6 @@ This project is built with:
 ## Security Note
 
 If you have accidentally committed your `.env` file to the repository, you should take immediate action to remove it from the Git history. Even after you delete the file and update your `.gitignore`, the file will still exist in the commit history. You can use a tool like `git-filter-repo` to permanently remove the file from your repository's history.
-
-## Contributing
-
-We welcome contributions from the community to help make Habo even better! Whether you're a developer, or just an enthusiastic user, there are many ways you can help. 
 
 ## License
 

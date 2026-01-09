@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { trackViewApiLogs } from '@/integrations/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -91,7 +92,12 @@ export function ApiLogPanel({ logs, onClear }: ApiLogPanelProps) {
           </Card>
         )}
         <Button
-          onClick={() => setIsOpen(!isOpen)}
+          onClick={() => {
+            if (!isOpen) {
+              trackViewApiLogs();
+            }
+            setIsOpen(!isOpen);
+          }}
           className="hidden rounded-full shadow-lg"
         >
           {isOpen ? <ChevronDown className="h-5 w-5" /> : <Terminal className="h-5 w-5" />}

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { trackArtifactUploadStart, trackArtifactUploadComplete, trackUploadFailed } from '@/integrations/firebase';
 import { QRCodeSVG } from 'qrcode.react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -117,6 +118,9 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
     setArtifactStatus(null);
     setCopied(false);
 
+    trackArtifactUploadStart();
+    const startTime = Date.now();
+
     try {
       const platform = selectedApp?.platform || 'ios';
       const result = await uploadArtifact(
@@ -143,6 +147,11 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
 
         // Artifact status with public URL is already handled in checkArtifactStatus
         setArtifactStatus(result.artifactStatus || null);
+        const endTime = Date.now();
+        const uploadDuration = (endTime - startTime) / 1000;
+        const fileType = getFileExtension(selectedFile.name);
+        trackArtifactUploadComplete(fileType, selectedFile.size, uploadDuration);
+
 
         onUploadComplete({
           fileName: selectedFile.name,
@@ -155,6 +164,7 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
       } else {
         setUploadState('error');
         setErrorMessage(result.message);
+        trackUploadFailed();
         onUploadComplete({
           fileName: selectedFile.name,
           fileType: getFileExtension(selectedFile.name) as 'ipa' | 'apk' | 'aab',
@@ -169,6 +179,7 @@ export function UploadZone({ apiToken, appId, selectedApp, isConnected, onUpload
       } else {
         setUploadState('error');
         setErrorMessage('Upload failed unexpectedly');
+        trackUploadFailed();
       }
     } finally {
       setAbortController(null);

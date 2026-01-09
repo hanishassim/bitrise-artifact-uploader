@@ -11,7 +11,7 @@ Deno.serve(async (req: Request) => {
   logs.push(`Origin: ${origin}`);
 
   // IMPORTANT: Replace this with your frontend's production URL
-  const productionUrl = process.env.PRODUCTION_URL || 'https://bitrise-artifact-uploader.vercel.app' || 'https://artifact-uploader.lovable.app';
+  const productionUrl = process.env.PRODUCTION_URL || 'https://bitrise-artifact-uploader.vercel.app';
 
   const allowedOrigins = [
     'http://localhost:3000',

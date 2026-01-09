@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ExternalLink, Info, Key } from 'lucide-react';
+import { trackClickApiTokenGuide } from '@/integrations/firebase';
 
 export function BitriseGuide() {
   return (
@@ -28,6 +29,7 @@ export function BitriseGuide() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-2 inline-flex items-center gap-1 text-xs text-primary hover:underline"
+                onClick={trackClickApiTokenGuide}
               >
                 Open Personal Access Tokens
                 <ExternalLink className="h-3 w-3" />

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { trackClickDonationLink } from '@/integrations/firebase';
 
 interface BuyMeACoffeeButtonProps {
   className?: string;
@@ -11,6 +12,7 @@ export function BuyMeACoffeeButton({ className }: BuyMeACoffeeButtonProps) {
         href="https://www.buymeacoffee.com/hanis"
         target="_blank"
         rel="noopener noreferrer"
+        onClick={trackClickDonationLink}
       >
         <img
           src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png"

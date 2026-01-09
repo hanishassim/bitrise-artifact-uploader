@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { trackAuthenticationFailed, trackAuthenticationSuccess, trackApiError } from '@/integrations/firebase';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ export function AuthPanel({
   const handleFetchOrganizations = useCallback(async () => {
     if (!apiToken.trim()) {
       setTestResult({ success: false, message: 'API token is required' });
+      trackAuthenticationFailed();
       return;
     }
 
@@ -64,6 +66,7 @@ export function AuthPanel({
     if (orgsResult.success && orgsResult.data) {
       if (orgsResult.data.length === 0) {
         setTestResult({ success: false, message: 'No organizations found for this token.' });
+        trackAuthenticationFailed();
       } else {
         setOrganizations(orgsResult.data);
         setIsOrgsFetched(true);
@@ -73,12 +76,14 @@ export function AuthPanel({
           onOrganizationNameChange(org.name);
           onConnectionChange(true);
           setTestResult({ success: true, message: `Connected to ${org.name}` });
+          trackAuthenticationSuccess();
         } else {
           setTestResult(null);
         }
       }
     } else {
       setTestResult({ success: false, message: orgsResult.error || 'Failed to fetch organizations.' });
+      trackApiError();
     }
 
     setIsLoading(false);

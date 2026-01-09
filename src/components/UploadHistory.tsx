@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { trackClearHistory } from '@/integrations/firebase';
 import { QRCodeSVG } from 'qrcode.react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -74,7 +75,10 @@ export function UploadHistory({ history, onClearHistory }: UploadHistoryProps) {
               <CardDescription>Recent uploads stored locally</CardDescription>
             </div>
           </div>
-          <Button variant="ghost" onClick={onClearHistory}>
+          <Button variant="ghost" onClick={() => {
+            onClearHistory();
+            trackClearHistory();
+          }}>
             <Trash2 className="h-4 w-4" />
             Clear
           </Button>

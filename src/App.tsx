@@ -7,13 +7,20 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import WavyBackground from "./components/ui/WavyBackground";
+import { useEffect } from "react";
+import { trackPageView } from "./integrations/firebase";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <WavyBackground />
-    <TooltipProvider>
+const App = () => {
+  useEffect(() => {
+    trackPageView();
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <WavyBackground />
+      <TooltipProvider>
       <Toaster />
       <Sonner />
       <BrowserRouter>
@@ -25,6 +32,7 @@ const App = () => (
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
-);
+  )
+};
 
 export default App;

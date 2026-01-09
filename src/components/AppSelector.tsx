@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { trackAppSelection } from '@/integrations/firebase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -220,7 +221,10 @@ export function AppSelector({
                   return (
                     <button
                       key={app.id}
-                      onClick={() => onAppSelect(app)}
+                      onClick={() => {
+                        onAppSelect(app);
+                        trackAppSelection();
+                      }}
                       className={`
                         relative w-full flex items-center gap-3 rounded-xl border-2 p-4 text-left 
                         transition-all duration-200 ease-out

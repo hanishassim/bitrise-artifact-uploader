@@ -113,9 +113,20 @@ const Index = () => {
         {/* Footer */}
         <div className="mt-8 flex flex-col items-center gap-4 text-xs text-muted-foreground">
           <BuyMeACoffeeButton />
-          <div className="space-y-1 text-center">
+          <div className="space-y-2 text-center">
             <p>Credentials are never stored • All processing happens in your browser</p>
-            <p className="text-muted-foreground/70">
+            <p>
+              Found an issue? Submit it{" "}
+              <a
+                href="https://github.com/hanishassim/bitrise-artifact-uploader/issues/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                here
+              </a>
+            </p>
+            <p className="text-muted-foreground/70 pt-2">
               Bitrise® is a registered trademark of Bitrise Ltd. This tool is not affiliated with or endorsed by Bitrise.
             </p>
           </div>

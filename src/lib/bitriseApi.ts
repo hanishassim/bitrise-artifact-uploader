@@ -562,25 +562,36 @@ export function uploadArtifact(
       xhr.setRequestHeader('x-file-size', file.size.toString());
       xhr.setRequestHeader('x-file-name', file.name);
 
+      const uploadHeaders: Record<string, string> = {};
+      Object.values(uploadInfo.headers).forEach((h) => {
+        uploadHeaders[h.name] = h.value;
+      });
+      xhr.setRequestHeader('x-upload-headers', JSON.stringify(uploadHeaders));
+
       // Generate and log cURL command for reference
       const extension = file.name.split('.').pop()?.toLowerCase();
-      const isAndroidArtifact = extension === 'aab' || extension === 'apk';
 
-      const headersArray = Object.values(uploadInfo.headers);
       const headers: Record<string, string> = {};
-      headersArray.forEach((header) => {
-        headers[header.name] = header.value;
+      Object.values(uploadInfo.headers).forEach((h) => {
+        headers[h.name] = h.value;
       });
 
-      // Apply overrides for Android artifacts
-      if (extension === 'aab') {
-        headers['Content-Type'] = 'application/x-authorware-bin';
-      } else if (extension === 'apk') {
-        headers['Content-Type'] = 'application/vnd.android.package-archive';
+      // Match the proxy logic for Content-Type override
+      const currentContentType = headers['Content-Type'] || headers['content-type'] || 'application/octet-stream';
+      if (currentContentType === 'application/octet-stream') {
+        if (extension === 'aab') {
+          headers['Content-Type'] = 'application/x-authorware-bin';
+        } else if (extension === 'apk') {
+          headers['Content-Type'] = 'application/vnd.android.package-archive';
+        }
       }
 
-      // Add X-Goog-Content-Length-Range for Android artifacts to match sample
-      if (isAndroidArtifact) {
+      // Match the proxy logic for X-Goog-Content-Length-Range
+      if (extension === 'aab' || extension === 'apk') {
+        if (!headers['X-Goog-Content-Length-Range'] && !headers['x-goog-content-length-range']) {
+          headers['X-Goog-Content-Length-Range'] = `0,${file.size}`;
+        }
+      } else if (file.size && !headers['X-Goog-Content-Length-Range'] && !headers['x-goog-content-length-range']) {
         headers['X-Goog-Content-Length-Range'] = `0,${file.size}`;
       }
 

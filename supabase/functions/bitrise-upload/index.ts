@@ -4,7 +4,7 @@
 Deno.serve(async (req: Request) => {
   const corsHeaders = {
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-upload-url, x-file-size, x-file-name',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-upload-url, x-file-size, x-file-name, x-upload-headers',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS',
   };
 
@@ -16,6 +16,7 @@ Deno.serve(async (req: Request) => {
     const uploadUrl = req.headers.get('x-upload-url');
     const fileSize = req.headers.get('x-file-size');
     const fileName = req.headers.get('x-file-name');
+    const uploadHeadersRaw = req.headers.get('x-upload-headers');
 
     if (!uploadUrl || !fileSize) {
       return new Response(
@@ -26,34 +27,55 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Uploading file: ${fileName}, size: ${fileSize} bytes`);
 
-    // Determine Content-Type based on file extension
-    let contentType = 'application/octet-stream';
-    if (fileName) {
-      const extension = fileName.split('.').pop()?.toLowerCase();
-      if (extension === 'aab') {
-        contentType = 'application/x-authorware-bin';
-      } else if (extension === 'apk') {
-        contentType = 'application/vnd.android.package-archive';
+    // Parse Bitrise-provided headers
+    let bitriseHeaders: Record<string, string> = {};
+    if (uploadHeadersRaw) {
+      try {
+        bitriseHeaders = JSON.parse(uploadHeadersRaw);
+      } catch (e) {
+        console.error('Failed to parse x-upload-headers:', e);
       }
     }
 
-    console.log(`Using Content-Type: ${contentType}`);
+    // Determine fallback Content-Type based on file extension if not provided by Bitrise
+    let contentType = bitriseHeaders['Content-Type'] || bitriseHeaders['content-type'] || 'application/octet-stream';
 
-    // Forward the request body stream directly to GCS
-    const headers: Record<string, string> = {
+    if (fileName) {
+      const extension = fileName.split('.').pop()?.toLowerCase();
+      // If Bitrise didn't provide a specific content type or provided octet-stream, we apply our overrides
+      if (contentType === 'application/octet-stream') {
+        if (extension === 'aab') {
+          contentType = 'application/x-authorware-bin';
+        } else if (extension === 'apk') {
+          contentType = 'application/vnd.android.package-archive';
+        }
+      }
+    }
+
+    // Prepare final headers for GCS
+    const finalHeaders: Record<string, string> = {
+      ...bitriseHeaders,
       'Content-Type': contentType,
     };
 
-    // Only add X-Goog-Content-Length-Range for Android artifacts to keep IPA logic as is
-    // Wait, the original implementation actually had this for all files.
-    // To strictly follow "keep existing implementation logic" for IPA, we keep it.
-    if (fileSize) {
-      headers['X-Goog-Content-Length-Range'] = `0,${fileSize}`;
+    // Ensure X-Goog-Content-Length-Range is set as requested for Android artifacts
+    // or kept if it was already in bitriseHeaders
+    const extension = fileName?.split('.').pop()?.toLowerCase();
+    if (extension === 'aab' || extension === 'apk') {
+      if (!finalHeaders['X-Goog-Content-Length-Range'] && !finalHeaders['x-goog-content-length-range']) {
+        finalHeaders['X-Goog-Content-Length-Range'] = `0,${fileSize}`;
+      }
+    } else if (fileSize && !finalHeaders['X-Goog-Content-Length-Range'] && !finalHeaders['x-goog-content-length-range']) {
+       // Original behavior for other files
+       finalHeaders['X-Goog-Content-Length-Range'] = `0,${fileSize}`;
     }
 
+    console.log(`Final headers for GCS:`, JSON.stringify(finalHeaders));
+
+    // Forward the request body stream directly to GCS
     const gcsResponse = await fetch(uploadUrl, {
       method: 'PUT',
-      headers,
+      headers: finalHeaders,
       body: req.body,
     });
 

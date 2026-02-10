@@ -180,11 +180,12 @@ async function getUploadUrl(
   appId: string,
   artifactId: string,
   fileName: string,
-  fileSizeBytes: number
+  fileSizeBytes: number,
+  contentType?: string
 ): Promise<{ success: boolean; data?: UploadUrlResponse; error?: string; curlCommand?: string; logs?: string[] }> {
   try {
     const { data, error } = await supabase.functions.invoke('bitrise-proxy', {
-      body: { action: 'getUploadUrl', apiToken, appId, artifactId, fileName, fileSizeBytes }
+      body: { action: 'getUploadUrl', apiToken, appId, artifactId, fileName, fileSizeBytes, contentType }
     });
 
     if (error) {
@@ -454,9 +455,18 @@ export function uploadArtifact(
     const artifactId = generateUUID();
 
     const upload = async () => {
+      // Determine Content-Type based on file extension
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      let contentType = undefined;
+      if (extension === 'aab') {
+        contentType = 'application/x-authorware-bin';
+      } else if (extension === 'apk') {
+        contentType = 'application/vnd.android.package-archive';
+      }
+
       // Step 1: Get a pre-signed upload URL from the Bitrise API.
       // This is a GET request, as confirmed by the Swagger documentation.
-      const uploadUrlResult = await getUploadUrl(apiToken, appId, artifactId, file.name, file.size);
+      const uploadUrlResult = await getUploadUrl(apiToken, appId, artifactId, file.name, file.size, contentType);
       addApiLog({ curlCommand: uploadUrlResult.curlCommand, logs: uploadUrlResult.logs });
 
       if (!uploadUrlResult.success || !uploadUrlResult.data) {
@@ -576,22 +586,18 @@ export function uploadArtifact(
         headers[h.name] = h.value;
       });
 
-      // Match the proxy logic for Content-Type override
-      const currentContentType = headers['Content-Type'] || headers['content-type'] || 'application/octet-stream';
-      if (currentContentType === 'application/octet-stream') {
+      // Match the new proxy logic: prioritize Bitrise headers and fallback ONLY if missing
+      if (!headers['Content-Type'] && !headers['content-type']) {
+        let fallbackContentType = 'application/octet-stream';
         if (extension === 'aab') {
-          headers['Content-Type'] = 'application/x-authorware-bin';
+          fallbackContentType = 'application/x-authorware-bin';
         } else if (extension === 'apk') {
-          headers['Content-Type'] = 'application/vnd.android.package-archive';
+          fallbackContentType = 'application/vnd.android.package-archive';
         }
+        headers['Content-Type'] = fallbackContentType;
       }
 
-      // Match the proxy logic for X-Goog-Content-Length-Range
-      if (extension === 'aab' || extension === 'apk') {
-        if (!headers['X-Goog-Content-Length-Range'] && !headers['x-goog-content-length-range']) {
-          headers['X-Goog-Content-Length-Range'] = `0,${file.size}`;
-        }
-      } else if (file.size && !headers['X-Goog-Content-Length-Range'] && !headers['x-goog-content-length-range']) {
+      if (!headers['X-Goog-Content-Length-Range'] && !headers['x-goog-content-length-range']) {
         headers['X-Goog-Content-Length-Range'] = `0,${file.size}`;
       }
 

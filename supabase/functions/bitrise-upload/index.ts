@@ -37,37 +37,30 @@ Deno.serve(async (req: Request) => {
       }
     }
 
-    // Determine fallback Content-Type based on file extension if not provided by Bitrise
-    let contentType = bitriseHeaders['Content-Type'] || bitriseHeaders['content-type'] || 'application/octet-stream';
+    // Use Bitrise-provided headers as the base.
+    // IMPORTANT: We must NOT override headers provided by Bitrise (like Content-Type)
+    // because they are used to generate the signed URL signature.
+    const finalHeaders: Record<string, string> = { ...bitriseHeaders };
 
-    if (fileName) {
-      const extension = fileName.split('.').pop()?.toLowerCase();
-      // If Bitrise didn't provide a specific content type or provided octet-stream, we apply our overrides
-      if (contentType === 'application/octet-stream') {
+    // Determine fallback Content-Type ONLY if not provided by Bitrise at all
+    if (!finalHeaders['Content-Type'] && !finalHeaders['content-type']) {
+      let contentType = 'application/octet-stream';
+      if (fileName) {
+        const extension = fileName.split('.').pop()?.toLowerCase();
         if (extension === 'aab') {
           contentType = 'application/x-authorware-bin';
         } else if (extension === 'apk') {
           contentType = 'application/vnd.android.package-archive';
         }
       }
+      finalHeaders['Content-Type'] = contentType;
     }
 
-    // Prepare final headers for GCS
-    const finalHeaders: Record<string, string> = {
-      ...bitriseHeaders,
-      'Content-Type': contentType,
-    };
-
-    // Ensure X-Goog-Content-Length-Range is set as requested for Android artifacts
-    // or kept if it was already in bitriseHeaders
-    const extension = fileName?.split('.').pop()?.toLowerCase();
-    if (extension === 'aab' || extension === 'apk') {
-      if (!finalHeaders['X-Goog-Content-Length-Range'] && !finalHeaders['x-goog-content-length-range']) {
+    // Ensure X-Goog-Content-Length-Range is set ONLY if not provided by Bitrise
+    if (!finalHeaders['X-Goog-Content-Length-Range'] && !finalHeaders['x-goog-content-length-range']) {
+      if (fileSize) {
         finalHeaders['X-Goog-Content-Length-Range'] = `0,${fileSize}`;
       }
-    } else if (fileSize && !finalHeaders['X-Goog-Content-Length-Range'] && !finalHeaders['x-goog-content-length-range']) {
-       // Original behavior for other files
-       finalHeaders['X-Goog-Content-Length-Range'] = `0,${fileSize}`;
     }
 
     console.log(`Final headers for GCS:`, JSON.stringify(finalHeaders));

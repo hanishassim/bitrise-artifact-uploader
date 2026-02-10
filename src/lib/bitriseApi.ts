@@ -579,8 +579,6 @@ export function uploadArtifact(
       xhr.setRequestHeader('x-upload-headers', JSON.stringify(uploadHeaders));
 
       // Generate and log cURL command for reference
-      const extension = file.name.split('.').pop()?.toLowerCase();
-
       const headers: Record<string, string> = {};
       Object.values(uploadInfo.headers).forEach((h) => {
         headers[h.name] = h.value;

@@ -33,7 +33,7 @@ Deno.serve(async (req: Request) => {
   try {
     logs.push('Parsing request body...');
     const body = await req.json();
-    const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes, whatsNew, withPublicPage } = body;
+    const { action, apiToken, appId, workspaceId, artifactId, fileName, fileSizeBytes, contentType, whatsNew, withPublicPage } = body;
     logs.push(`Action: ${action}`);
 
     // uploadFile action doesn't require apiToken (uses pre-signed URL)
@@ -121,11 +121,15 @@ Deno.serve(async (req: Request) => {
           );
         }
         // Updated endpoint: /connected-apps/{connected_app_id}/installable-artifacts/{installable_artifact_id}/upload-url
-        const queryParams = new URLSearchParams({
+        const queryParams: Record<string, string> = {
           file_name: fileName,
           file_size_bytes: fileSizeBytes.toString(),
-        }).toString();
-        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/upload-url?${queryParams}`;
+        };
+        if (contentType) {
+          queryParams['content_type'] = contentType;
+        }
+        const queryString = new URLSearchParams(queryParams).toString();
+        url = `${RM_API_HOST}/release-management/v1/connected-apps/${appId}/installable-artifacts/${artifactId}/upload-url?${queryString}`;
         const headers = { 'Authorization': apiToken };
         curlCommand = generateCurlCommand(url, 'GET', headers);
         logs.push(curlCommand);

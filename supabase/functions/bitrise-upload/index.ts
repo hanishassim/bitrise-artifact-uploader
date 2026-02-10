@@ -26,13 +26,34 @@ Deno.serve(async (req: Request) => {
 
     console.log(`Uploading file: ${fileName}, size: ${fileSize} bytes`);
 
+    // Determine Content-Type based on file extension
+    let contentType = 'application/octet-stream';
+    if (fileName) {
+      const extension = fileName.split('.').pop()?.toLowerCase();
+      if (extension === 'aab') {
+        contentType = 'application/x-authorware-bin';
+      } else if (extension === 'apk') {
+        contentType = 'application/vnd.android.package-archive';
+      }
+    }
+
+    console.log(`Using Content-Type: ${contentType}`);
+
     // Forward the request body stream directly to GCS
+    const headers: Record<string, string> = {
+      'Content-Type': contentType,
+    };
+
+    // Only add X-Goog-Content-Length-Range for Android artifacts to keep IPA logic as is
+    // Wait, the original implementation actually had this for all files.
+    // To strictly follow "keep existing implementation logic" for IPA, we keep it.
+    if (fileSize) {
+      headers['X-Goog-Content-Length-Range'] = `0,${fileSize}`;
+    }
+
     const gcsResponse = await fetch(uploadUrl, {
       method: 'PUT',
-      headers: {
-        'Content-Type': 'application/octet-stream',
-        'X-Goog-Content-Length-Range': `0,${fileSize}`,
-      },
+      headers,
       body: req.body,
     });
 

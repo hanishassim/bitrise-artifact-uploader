@@ -563,13 +563,32 @@ export function uploadArtifact(
       xhr.setRequestHeader('x-file-name', file.name);
 
       // Generate and log cURL command for reference
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      const isAndroidArtifact = extension === 'aab' || extension === 'apk';
+
       const headersArray = Object.values(uploadInfo.headers);
       const headers: Record<string, string> = {};
       headersArray.forEach((header) => {
         headers[header.name] = header.value;
       });
-      const headerPart = Object.entries(headers).map(([key, value]) => `-H '${key}: ${value}'`).join(' ');
-      const curlCommand = `curl -X PUT ${headerPart} --upload-file '${file.name}' '${uploadInfo.url}'`;
+
+      // Apply overrides for Android artifacts
+      if (extension === 'aab') {
+        headers['Content-Type'] = 'application/x-authorware-bin';
+      } else if (extension === 'apk') {
+        headers['Content-Type'] = 'application/vnd.android.package-archive';
+      }
+
+      // Add X-Goog-Content-Length-Range for Android artifacts to match sample
+      if (isAndroidArtifact) {
+        headers['X-Goog-Content-Length-Range'] = `0,${file.size}`;
+      }
+
+      const headerPart = Object.entries(headers)
+        .map(([key, value]) => `-H "${key}: ${value}"`)
+        .join(' ');
+
+      const curlCommand = `curl -X "PUT" ${headerPart} --upload-file "${file.name}" "${uploadInfo.url}"`;
       addApiLog({ curlCommand, logs: [`[File Upload] Uploading ${file.name} (${file.size} bytes) via proxy`] });
 
       xhr.send(file);
